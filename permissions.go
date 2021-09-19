@@ -82,7 +82,12 @@ func hasuraPermissionFromRelationalTable(table *schema.Table, roleName, schemaNa
 func obtainPermissionsTableFromEntSchema(schema *gen.Graph, roleName, schemaName string) ([]*TableDefinition, error) {
 	tableDefinitions := []*TableDefinition{}
 
-	for _, table := range schema.Tables() {
+	tables, err := schema.Tables()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to obtain tables from schema")
+	}
+
+	for _, table := range tables {
 		definition, err := hasuraPermissionFromRelationalTable(table, roleName, schemaName)
 		if err != nil {
 			return nil, errors.WithStack(err)

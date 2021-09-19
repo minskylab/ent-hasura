@@ -244,7 +244,12 @@ func obtainHasuraTablesFromEntSchema(schema *gen.Graph, schemaName string) ([]*T
 		tables = append(tables, definition)
 	}
 
-	for _, table := range schema.Tables() {
+	schemaTables, err := schema.Tables()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	for _, table := range schemaTables {
 		if elementInArray(mappedNodes, table.Name) {
 			continue
 		}
