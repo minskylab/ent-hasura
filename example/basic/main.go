@@ -7,7 +7,7 @@ const defaultSchemaPath = "./ent/schema"
 func main() {
 	input := ""
 
-	output := "metadata.json"
+	output := "hasura/metadata.json"
 	source := "default"
 
 	overrideTables := false

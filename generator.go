@@ -3,6 +3,8 @@ package hasura
 import (
 	"encoding/json"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"entgo.io/ent/dialect/sql/schema"
@@ -232,6 +234,10 @@ func hasuraMetadataFromEntSchema(schema *gen.Graph, schemaName string) (*Metadat
 func generateFile(metadata HasuraMetadata, outputFile string) error {
 	data, err := json.MarshalIndent(metadata, "", "  ")
 	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(outputFile), os.ModePerm); err != nil {
 		return errors.WithStack(err)
 	}
 

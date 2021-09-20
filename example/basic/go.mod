@@ -12,7 +12,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
-	github.com/minskylab/ent-hasura v0.0.0-20210919210325-660abd994a1d // indirect
+	github.com/minskylab/ent-hasura v0.0.0-20210920004759-c5dd5a55ddaf // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sirupsen/logrus v1.2.0 // indirect
