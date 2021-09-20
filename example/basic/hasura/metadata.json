@@ -1,0 +1,50 @@
+{
+  "resource_version": 0,
+  "metadata": {
+    "version": 0,
+    "sources": [
+      {
+        "name": "",
+        "kind": "",
+        "tables": [
+          {
+            "table": {
+              "schema": "public",
+              "name": "users"
+            },
+            "configuration": {
+              "custom_root_fields": {
+                "insert": "insertUsers",
+                "select_aggregate": "usersAggregate",
+                "insert_one": "insertUser",
+                "select_by_pk": "user",
+                "select": "users",
+                "delete": "deleteUsers",
+                "update": "updateUsers",
+                "delete_by_pk": "deleteUser",
+                "update_by_pk": "updateUser"
+              },
+              "custom_name": "User"
+            }
+          }
+        ],
+        "configuration": {
+          "connection_info": {
+            "use_prepared_statements": false,
+            "database_url": {
+              "from_env": ""
+            },
+            "isolation_level": "",
+            "pool_settings": {
+              "connection_lifetime": 0,
+              "retries": 0,
+              "idle_timeout": 0,
+              "max_connections": 0
+            }
+          }
+        }
+      }
+    ],
+    "remote_schemas": null
+  }
+}
