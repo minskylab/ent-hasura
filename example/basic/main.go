@@ -1,27 +1,14 @@
 package main
 
-import hasura "github.com/minskylab/ent-hasura"
-
-const defaultSchemaPath = "./ent/schema"
+import (
+	hasura "github.com/minskylab/ent-hasura"
+	"github.com/pkg/errors"
+)
 
 func main() {
-	input := ""
+	defaultConfig := hasura.DefaultHasuraMetadataConfig
 
-	output := "hasura/metadata.json"
-	source := "default"
-
-	overrideTables := false
-	schemaName := "public"
-
-	defaultRole := ""
-
-	hasura.GenerateHasuraConfigurationAndRelationships(
-		defaultSchemaPath,
-		output,
-		input,
-		source,
-		schemaName,
-		overrideTables,
-		defaultRole,
-	)
+	if err := hasura.CreateDefaultMetadataFromSchema(&defaultConfig); err != nil {
+		panic(errors.WithStack(err))
+	}
 }
