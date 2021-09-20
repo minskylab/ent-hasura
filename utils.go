@@ -3,8 +3,6 @@ package hasura
 import (
 	"encoding/json"
 	"io/ioutil"
-
-	"github.com/iancoleman/strcase"
 )
 
 func parseHasuraMetadata(filepath string) (*HasuraMetadata, error) {
@@ -19,10 +17,6 @@ func parseHasuraMetadata(filepath string) (*HasuraMetadata, error) {
 	}
 
 	return &meta, nil
-}
-
-func fixedName(name string) string {
-	return strcase.ToCamel(name)
 }
 
 func elementInArray(array []string, element string) bool {

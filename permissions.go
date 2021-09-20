@@ -49,7 +49,7 @@ func minimalDeletePermission(role string, columns []string) *DeletePermission {
 	}
 }
 
-func enhanceHasuraTableWithPermissions(source *Source, table *TableDefinition, light bool) {
+func enhanceHasuraTableWithPermissions(source *Source, table *TableDefinition) {
 	for i, iTable := range source.Tables {
 		if iTable.Table.Schema == table.Table.Schema && iTable.Table.Name == table.Table.Name {
 			source.Tables[i].InsertPermissions = table.InsertPermissions
@@ -98,7 +98,7 @@ func obtainPermissionsTableFromEntSchema(schema *gen.Graph, roleName, schemaName
 	return tableDefinitions, nil
 }
 
-func enhancedHasuraPermissions(initial *HasuraMetadata, schema *gen.Graph, sourceName, roleName, schemaName string, light bool) error {
+func enhancedHasuraPermissions(initial *HasuraMetadata, schema *gen.Graph, sourceName, roleName, schemaName string) error {
 	initial.ResourceVersion += 1
 
 	tables, err := obtainPermissionsTableFromEntSchema(schema, roleName, schemaName)
@@ -109,7 +109,7 @@ func enhancedHasuraPermissions(initial *HasuraMetadata, schema *gen.Graph, sourc
 	for _, source := range initial.Metadata.Sources {
 		if source.Name == sourceName {
 			for _, table := range tables {
-				enhanceHasuraTableWithPermissions(source, table, light)
+				enhanceHasuraTableWithPermissions(source, table)
 			}
 		}
 	}

@@ -11,9 +11,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ApplyHasuraMetadata execute the replace_metadata method to our hasura instance and metadata.
-func ApplyHasuraMetadata(hasuraHost string, metadataFilepath string) error {
-	endpoint := fmt.Sprintf("%s/v1/query", hasuraHost)
+// applyHasuraMetadata execute the replace_metadata method to our hasura instance and metadata.
+func applyHasuraMetadata(hasuraHost string, metadataFilepath string) error {
+	endpoint := fmt.Sprintf("%s/v1/api", hasuraHost)
 	if !strings.HasPrefix(endpoint, "http") {
 		endpoint = "http://" + endpoint
 	}
@@ -40,7 +40,7 @@ func ApplyHasuraMetadata(hasuraHost string, metadataFilepath string) error {
 
 	req.Header = head
 
-	res, err := http.DefaultClient.Do(req)		
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return errors.WithStack(err)
 	}

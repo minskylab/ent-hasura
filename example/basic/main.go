@@ -13,7 +13,6 @@ func main() {
 	overrideTables := false
 	schemaName := "public"
 
-	light := false
 	defaultRole := ""
 
 	hasura.GenerateHasuraConfigurationAndRelationships(
@@ -23,7 +22,6 @@ func main() {
 		source,
 		schemaName,
 		overrideTables,
-		light,
 		defaultRole,
 	)
 }

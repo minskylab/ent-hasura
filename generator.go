@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	insertVerbName = "insert"
-	updateVerbName = "update"
-	deleteVerbName = "delete"
+	insertVerbName    = "insert"
+	updateVerbName    = "update"
+	deleteVerbName    = "delete"
+	aggregateVerbName = "aggregate"
 )
 
 func basicDefinition(pluralize *pluralize.Client, tableName, nodeName, schemaName string) (*TableDefinition, error) {
@@ -25,8 +26,10 @@ func basicDefinition(pluralize *pluralize.Client, tableName, nodeName, schemaNam
 	definition.Table.Name = tableName
 	definition.Table.Schema = schemaName
 
-	singularName := fixedName(pluralize.Singular(nodeName))
-	pluralName := fixedName(pluralize.Plural(nodeName))
+	singularName := strcase.ToCamel(pluralize.Singular(nodeName))
+	pluralName := strcase.ToCamel(pluralize.Plural(nodeName))
+
+	aggregationSuffix := strcase.ToCamel(aggregateVerbName)
 
 	if singularName == pluralName {
 		logger.Warn("singular-plural equality found")
@@ -45,7 +48,7 @@ func basicDefinition(pluralize *pluralize.Client, tableName, nodeName, schemaNam
 		InsertOne:       strcase.ToLowerCamel(insertVerbName + singularName),
 		Select:          strcase.ToLowerCamel(pluralName),
 		SelectByPk:      strcase.ToLowerCamel(singularName),
-		SelectAggregate: strcase.ToLowerCamel(pluralName + "Aggregate"),
+		SelectAggregate: strcase.ToLowerCamel(pluralName + aggregationSuffix),
 		Update:          strcase.ToLowerCamel(updateVerbName + pluralName),
 		UpdateByPk:      strcase.ToLowerCamel(updateVerbName + singularName),
 		Delete:          strcase.ToLowerCamel(deleteVerbName + pluralName),
@@ -78,7 +81,6 @@ func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, sc
 			fieldName := realName + "ID"
 
 			if edge.M2O() {
-				// fieldName = edge.Name
 				definition.Configuration.CustomColumnNames[name] = fieldName
 			}
 
@@ -88,11 +90,6 @@ func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, sc
 			}
 
 			if !edge.OwnFK() {
-				// fk, err := edge.ForeignKey()
-				// if err != nil {
-				// 	return nil, errors.WithStack(err)
-				// }
-
 				foreignKey = ForeignKeyConstraintOn{
 					Column: name,
 					Table: Table{
@@ -100,8 +97,6 @@ func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, sc
 						Name:   edge.Rel.Table,
 					},
 				}
-
-				// definition.Configuration.CustomColumnNames[name] = fieldName
 			}
 
 			definition.ObjectRelationships = append(definition.ObjectRelationships, &ObjectRelationship{
@@ -122,42 +117,8 @@ func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, sc
 			columnName := edge.Ref.Rel.Columns[0]
 
 			if edge.M2M() {
-				// columnName = edge.Ref.Rel.Columns[1]
-				// if strings.EqualFold(node.Table(), "jobs") {
-				// 	pp.Println(edge.Rel.Type.String())
-				// 	pp.Println(edge.Constant())
-				// 	pp.Println(edge.Rel)
-				// 	// pp.Println(edge.Ref.Rel)
-				// }
-
-				// columnName = edge.Rel.Column()
-
-				// pp.Println(, edge.Rel.Column())
-
-				// for _, column := range edge.Rel.Columns {
-				// if strings.HasPrefix(column, strings.ToLower(node.Name)) {
-				// 	c := column
-				// 	pp.Println("edge.Ref.Rel", c)
-				// 	columnName = c
-				// }
-				// }
-
 				columnName = strcase.ToSnake(node.Name) + "_id"
-				// pp.Println(strcase.ToSnake(node.Name))
-
-				// columnName = edge.Ref.Rel.Columns[1]
-
-				// if edge.IsInverse() {
-				// 	// logger.Info("abcd", edge)
-				// 	columnName = edge.Rel.Columns[1]
-				// }
 			}
-
-			// if edge.O2M() && !edge.OwnFK() {
-			// if len(edge.Ref.Rel.Columns) > 1 && !edge.OwnFK() {
-			// 	columnName = edge.Rel.Columns[1]
-			// }
-			// }
 
 			tableName := edge.Rel.Table
 
@@ -176,13 +137,12 @@ func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, sc
 		}
 	}
 
-	// definition.SelectPermissions = []SelectPermission{}
-
 	return definition, nil
 }
 
 func hasuraTableFromRelationalTable(pluralize *pluralize.Client, table *schema.Table, schemaName string) (*TableDefinition, error) {
-	customName := fixedName(pluralize.Singular(table.Name))
+	customName := strcase.ToCamel(pluralize.Singular(table.Name))
+
 	definition, err := basicDefinition(pluralize, table.Name, customName, schemaName)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -206,11 +166,6 @@ func hasuraTableFromRelationalTable(pluralize *pluralize.Client, table *schema.T
 
 		var foreignKey interface{} = field.Name
 
-		// if
-		// foreignKey = ForeignKeyConstraintOn{
-		// 	Column: field.Name,
-		// }
-
 		definition.ObjectRelationships = append(definition.ObjectRelationships, &ObjectRelationship{
 			Name: nameWithoutID,
 			Using: Using{
@@ -219,19 +174,13 @@ func hasuraTableFromRelationalTable(pluralize *pluralize.Client, table *schema.T
 		})
 	}
 
-	// for _, f := range table.ForeignKeys {
-	// 	logger.Info(f.Symbol)
-	// }
-
 	return definition, nil
 }
 
 func obtainHasuraTablesFromEntSchema(schema *gen.Graph, schemaName string) ([]*TableDefinition, error) {
 	pluralize := pluralize.NewClient()
-	// strcase.ConfigureAcronym("ID", "Id")
 
 	tables := []*TableDefinition{}
-
 	mappedNodes := []string{}
 
 	for _, node := range schema.Nodes {
@@ -254,7 +203,6 @@ func obtainHasuraTablesFromEntSchema(schema *gen.Graph, schemaName string) ([]*T
 			continue
 		}
 
-		// logger.Infof("table not mapped: %s", table.Name)
 		definition, err := hasuraTableFromRelationalTable(pluralize, table, schemaName)
 		if err != nil {
 			return nil, errors.WithStack(err)
@@ -262,8 +210,6 @@ func obtainHasuraTablesFromEntSchema(schema *gen.Graph, schemaName string) ([]*T
 
 		tables = append(tables, definition)
 	}
-
-	// logger.Info("done")
 
 	return tables, nil
 }
