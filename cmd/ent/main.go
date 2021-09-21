@@ -17,6 +17,7 @@ func main() {
 			{
 				Name:  "generate",
 				Usage: "generate a default metadata file",
+
 				Flags: []cli.Flag{
 					stringFlag("schema", "s", "./ent/schema"),
 					stringFlag("name", "n", "public"),
@@ -62,6 +63,10 @@ func generateCommand(c *cli.Context) error {
 	input := c.String("input")
 	role := c.String("role")
 	override := c.Bool("override")
+
+	if schemaOverride := c.Args().First(); schemaOverride != "" {
+		schema = schemaOverride
+	}
 
 	defaultConfig.SchemaName = schema
 	defaultConfig.SchemaName = name
