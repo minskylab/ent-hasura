@@ -160,6 +160,8 @@ github.com/minskylab/ent-hasura v0.0.0-20210921023101-3e05b0d7bb20 h1:kQ9FimrO43
 github.com/minskylab/ent-hasura v0.0.0-20210921023101-3e05b0d7bb20/go.mod h1:f7KrK+I0Tkks6ZCN9mHagIh3gQWE6ClDvDGDtJSqYsA=
 github.com/minskylab/ent-hasura v0.0.0-20210921032706-8a28c6c2f1b2 h1:3VEI04wilvAKQJdF7SFTM1+KJtiYBENds6zAfvc9JY4=
 github.com/minskylab/ent-hasura v0.0.0-20210921032706-8a28c6c2f1b2/go.mod h1:f7KrK+I0Tkks6ZCN9mHagIh3gQWE6ClDvDGDtJSqYsA=
+github.com/minskylab/ent-hasura v0.0.0-20210921040750-d43a6a3a7bd3 h1:WFxK1mHeu0f/VvCTFQrHAPMDRBvYeEMUoBxXz3h9HvI=
+github.com/minskylab/ent-hasura v0.0.0-20210921040750-d43a6a3a7bd3/go.mod h1:f7KrK+I0Tkks6ZCN9mHagIh3gQWE6ClDvDGDtJSqYsA=
 github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceTlRvqc=
 github.com/mitchellh/go-homedir v1.0.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
