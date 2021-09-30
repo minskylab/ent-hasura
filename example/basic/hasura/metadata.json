@@ -10,6 +10,44 @@
           {
             "table": {
               "schema": "public",
+              "name": "notes"
+            },
+            "configuration": {
+              "custom_root_fields": {
+                "insert": "insertNotes",
+                "select_aggregate": "notesAggregate",
+                "insert_one": "insertNote",
+                "select_by_pk": "note",
+                "select": "notes",
+                "delete": "deleteNotes",
+                "update": "updateNotes",
+                "delete_by_pk": "deleteNote",
+                "update_by_pk": "updateNote"
+              },
+              "custom_name": "Note",
+              "custom_column_names": {
+                "content": "content",
+                "title": "title"
+              }
+            },
+            "array_relationships": [
+              {
+                "name": "authors",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "note_id",
+                    "table": {
+                      "schema": "public",
+                      "name": "user_notes"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "schema": "public",
               "name": "users"
             },
             "configuration": {
@@ -24,8 +62,64 @@
                 "delete_by_pk": "deleteUser",
                 "update_by_pk": "updateUser"
               },
-              "custom_name": "User"
-            }
+              "custom_name": "User",
+              "custom_column_names": {
+                "email": "email",
+                "name": "name"
+              }
+            },
+            "array_relationships": [
+              {
+                "name": "notes",
+                "using": {
+                  "foreign_key_constraint_on": {
+                    "column": "user_id",
+                    "table": {
+                      "schema": "public",
+                      "name": "user_notes"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "table": {
+              "schema": "public",
+              "name": "user_notes"
+            },
+            "configuration": {
+              "custom_root_fields": {
+                "insert": "insertUserNotes",
+                "select_aggregate": "userNotesAggregate",
+                "insert_one": "insertUserNote",
+                "select_by_pk": "userNote",
+                "select": "userNotes",
+                "delete": "deleteUserNotes",
+                "update": "updateUserNotes",
+                "delete_by_pk": "deleteUserNote",
+                "update_by_pk": "updateUserNote"
+              },
+              "custom_name": "UserNote",
+              "custom_column_names": {
+                "note_id": "noteID",
+                "user_id": "userID"
+              }
+            },
+            "object_relationships": [
+              {
+                "name": "user",
+                "using": {
+                  "foreign_key_constraint_on": "user_id"
+                }
+              },
+              {
+                "name": "note",
+                "using": {
+                  "foreign_key_constraint_on": "note_id"
+                }
+              }
+            ]
           }
         ],
         "configuration": {
