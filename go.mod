@@ -7,7 +7,8 @@ require (
 	github.com/gertd/go-pluralize v0.1.7
 	github.com/iancoleman/strcase v0.2.0
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.2.0
+	github.com/sirupsen/logrus v1.8.1
+	github.com/urfave/cli/v2 v2.3.0
 )
 
 require (
@@ -18,7 +19,6 @@ require (
 	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/urfave/cli/v2 v2.3.0 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/sys v0.0.0-20210510120138-977fb7262007 // indirect
