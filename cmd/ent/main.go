@@ -28,6 +28,16 @@ func main() {
 				},
 				Action: generateCommand,
 			},
+			{
+				Name:  "apply",
+				Usage: "apply metadata generate from ent to a Hasura GraphQL Engine",
+				Flags: []cli.Flag{
+					stringFlag("schema", "s", "./ent/schema"),
+					stringFlag("name", "n", "public"),
+					stringFlag("source", "c", "default"),
+				},
+				Action: applyCommand,
+			},
 		},
 	}
 
@@ -78,6 +88,25 @@ func generateCommand(c *cli.Context) error {
 	if err := hasura.CreateDefaultMetadataFromSchema(&defaultConfig); err != nil {
 		return errors.WithStack(err)
 	}
+
+	return nil
+}
+
+func applyCommand(c *cli.Context) error {
+	run, err := hasura.NewEphemeralRuntime()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	schema := c.String("schema")
+	name := c.String("name")
+	source := c.String("source")
+
+	if schemaOverride := c.Args().First(); schemaOverride != "" {
+		schema = schemaOverride
+	}
+
+	run.ApplyPGTableCustomizationForAllTables(schema, name, source)
 
 	return nil
 }

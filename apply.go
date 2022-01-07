@@ -2,6 +2,10 @@ package hasura
 
 import (
 	"fmt"
+
+	"entgo.io/ent/entc"
+	"entgo.io/ent/entc/gen"
+	"github.com/pkg/errors"
 )
 
 const pgTableCustomizationAction = "pg_set_table_customization"
@@ -12,16 +16,8 @@ type PGTableCustomizationArgs struct {
 	Configuration Configuration `json:"configuration"`
 }
 
-func (r *EphemeralRuntime) setPGTableCustomization(hasuraHost string, table TableDefinition, source ...string) error {
-	endpoint := fmt.Sprintf("%s/v1/metadata", hasuraHost)
-	// if !strings.HasPrefix(endpoint, "http://") {
-	// 	endpoint = "http://" + endpoint
-	// }
-
-	selectedSource := "default"
-	if len(source) > 0 {
-		selectedSource = source[0]
-	}
+func (r *EphemeralRuntime) setPGTableCustomization(table TableDefinition, source string) error {
+	endpoint := fmt.Sprintf("%s/v1/metadata", r.Config.Endpoint)
 
 	r.Client.R().
 		SetHeaders(map[string]string{
@@ -33,7 +29,7 @@ func (r *EphemeralRuntime) setPGTableCustomization(hasuraHost string, table Tabl
 			Type: pgTableCustomizationAction,
 			Args: PGTableCustomizationArgs{
 				Table:         table.Table.Name,
-				Source:        selectedSource,
+				Source:        source,
 				Configuration: *table.Configuration,
 			},
 		}).
@@ -42,47 +38,22 @@ func (r *EphemeralRuntime) setPGTableCustomization(hasuraHost string, table Tabl
 	return nil
 }
 
-// func applyHasuraMetadata(hasuraHost string, metadataFilepath string) error {
-// 	endpoint := fmt.Sprintf("%s/v1/api", hasuraHost)
-// 	if !strings.HasPrefix(endpoint, "http") {
-// 		endpoint = "http://" + endpoint
-// 	}
+func (r *EphemeralRuntime) ApplyPGTableCustomizationForAllTables(schemaRoute, schemaName, sourceName string) error {
+	graph, err := entc.LoadGraph(schemaRoute, &gen.Config{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
-// 	metadataData, err := os.ReadFile(metadataFilepath)
-// 	if err != nil {
-// 		return errors.WithStack(err)
-// 	}
+	tables, err := obtainHasuraTablesFromEntSchema(graph, schemaName)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
-// 	buff := bytes.NewBufferString(fmt.Sprintf(`{
-// 		"type" : "replace_metadata",
-// 		"args": %s
-// 	}`, string(metadataData)))
+	for _, table := range tables {
+		if err := r.setPGTableCustomization(*table, sourceName); err != nil {
+			return errors.WithStack(err)
+		}
+	}
 
-// 	req, err := http.NewRequest(http.MethodPost, endpoint, buff)
-// 	if err != nil {
-// 		return errors.WithStack(err)
-// 	}
-
-// 	head := req.Header.Clone()
-
-// 	head.Add("Content-Type", "application/json")
-// 	head.Add("X-Hasura-Role", "admin")
-
-// 	req.Header = head
-
-// 	res, err := http.DefaultClient.Do(req)
-// 	if err != nil {
-// 		return errors.WithStack(err)
-// 	}
-
-// 	if res.StatusCode != 200 {
-// 		resBody, err := io.ReadAll(res.Body)
-// 		if err != nil {
-// 			return errors.WithStack(err)
-// 		}
-
-// 		return errors.New(fmt.Sprintf("error response, code: %d, res: %s", res.StatusCode, string(resBody)))
-// 	}
-
-// 	return nil
-// }
+	return nil
+}
