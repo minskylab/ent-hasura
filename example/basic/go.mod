@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	entgo.io/ent v0.9.1
-	github.com/minskylab/ent-hasura v0.0.0-20210921040750-d43a6a3a7bd3
+	github.com/minskylab/ent-hasura v0.0.0-20220107143103-0cc06407048d
 	github.com/pkg/errors v0.9.1
 )
 
