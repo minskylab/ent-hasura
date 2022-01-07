@@ -1,0 +1,6 @@
+version: 3
+endpoint: ${HASURA_GRAPHQL_ENDPOINT|http://localhost:9695}
+metadata_directory: ${HASURA_METADATA_DIRECTORY|metadata}
+actions:
+  kind: ${HASURA_ACTIONS_KIND|synchronous}
+  handler_webhook_baseurl: ${HASURA_ACTIONS_WEBHOOK_BASEURL|http://localhost:3000}
