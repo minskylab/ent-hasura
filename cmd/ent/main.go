@@ -6,6 +6,7 @@ import (
 
 	hasura "github.com/minskylab/ent-hasura"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -35,6 +36,8 @@ func main() {
 					stringFlag("schema", "s", "./ent/schema"),
 					stringFlag("name", "n", "public"),
 					stringFlag("source", "c", "default"),
+					stringFlag("envfile", "e", ".env"),
+					stringFlag("configfile", "f", ""),
 				},
 				Action: applyCommand,
 			},
@@ -93,7 +96,11 @@ func generateCommand(c *cli.Context) error {
 }
 
 func applyCommand(c *cli.Context) error {
-	run, err := hasura.NewEphemeralRuntime()
+	envFile := c.String("envfile")
+	logrus.Info(envFile)
+	run, err := hasura.NewEphemeralRuntime(
+		hasura.WithEnvFilepath(envFile),
+	)
 	if err != nil {
 		return errors.WithStack(err)
 	}

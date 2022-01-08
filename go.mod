@@ -26,14 +26,13 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/go-bindata/go-bindata v1.0.1-0.20190711162640-ee3c2418e368 // indirect
 	github.com/go-openapi/inflect v0.19.0 // indirect
-	github.com/go-resty/resty/v2 v2.7.0 // indirect
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gookit/config/v2 v2.0.27
-	github.com/konsorten/go-windows-terminal-sequences v1.0.1 // indirect
+	github.com/joho/godotenv v1.4.0
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/urfave/cli/v2 v2.3.0 // indirect
-	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
+	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20211029224645-99673261e6eb // indirect
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
