@@ -1,57 +1,66 @@
 package hasura
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"strings"
 
+	"entgo.io/ent/entc"
+	"entgo.io/ent/entc/gen"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
-// applyHasuraMetadata execute the replace_metadata method to our hasura instance and metadata.
-func applyHasuraMetadata(hasuraHost string, metadataFilepath string) error {
-	endpoint := fmt.Sprintf("%s/v1/api", hasuraHost)
-	if !strings.HasPrefix(endpoint, "http") {
-		endpoint = "http://" + endpoint
+const pgTableCustomizationAction = "pg_set_table_customization"
+
+type PGTableCustomizationArgs struct {
+	Table         string        `json:"table"`
+	Source        string        `json:"source"`
+	Configuration Configuration `json:"configuration"`
+}
+
+func (r *EphemeralRuntime) setPGTableCustomization(table TableDefinition, source string) error {
+	endpoint := fmt.Sprintf("%s/v1/metadata", r.Config.Endpoint)
+
+	res, err := r.Client.R().
+		SetHeaders(map[string]string{
+			"Content-Type":          "application/json",
+			"X-Hasura-Role":         "admin",
+			"X-Hasura-Admin-Secret": r.AdminSecret,
+		}).
+		SetBody(ActionBody{
+			Type: pgTableCustomizationAction,
+			Args: PGTableCustomizationArgs{
+				Table:         table.Table.Name,
+				Source:        source,
+				Configuration: *table.Configuration,
+			},
+		}).
+		Post(endpoint)
+	if err != nil {
+		logrus.Warn(errors.WithStack(err))
+		logrus.Warn("response code: ", res.StatusCode())
 	}
 
-	metadataData, err := os.ReadFile(metadataFilepath)
+	logrus.Info("response code: ", res.StatusCode())
+
+	return nil
+}
+
+func (r *EphemeralRuntime) ApplyPGTableCustomizationForAllTables(schemaRoute, schemaName, sourceName string) error {
+	graph, err := entc.LoadGraph(schemaRoute, &gen.Config{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	buff := bytes.NewBufferString(fmt.Sprintf(`{
-		"type" : "replace_metadata",
-		"args": %s
-	}`, string(metadataData)))
-
-	req, err := http.NewRequest(http.MethodPost, endpoint, buff)
+	tables, err := obtainHasuraTablesFromEntSchema(graph, schemaName)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	head := req.Header.Clone()
-
-	head.Add("Content-Type", "application/json")
-	head.Add("X-Hasura-Role", "admin")
-
-	req.Header = head
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
-	if res.StatusCode != 200 {
-		resBody, err := io.ReadAll(res.Body)
-		if err != nil {
+	for _, table := range tables {
+		logrus.Info("pushing table customization for table: ", table.Table.Name)
+		if err := r.setPGTableCustomization(*table, sourceName); err != nil {
 			return errors.WithStack(err)
 		}
-
-		return errors.New(fmt.Sprintf("error response, code: %d, res: %s", res.StatusCode, string(resBody)))
 	}
 
 	return nil

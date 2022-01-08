@@ -1,1 +1,3 @@
 .dccache
+.vscode
+.env

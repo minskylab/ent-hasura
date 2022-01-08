@@ -6,6 +6,7 @@ import (
 
 	hasura "github.com/minskylab/ent-hasura"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -27,6 +28,18 @@ func main() {
 					boolFlag("override", "ov", false),
 				},
 				Action: generateCommand,
+			},
+			{
+				Name:  "apply",
+				Usage: "apply metadata generate from ent to a Hasura GraphQL Engine",
+				Flags: []cli.Flag{
+					stringFlag("schema", "s", "./ent/schema"),
+					stringFlag("name", "n", "public"),
+					stringFlag("source", "c", "default"),
+					stringFlag("envfile", "e", ".env"),
+					stringFlag("configfile", "f", ""),
+				},
+				Action: applyCommand,
 			},
 		},
 	}
@@ -78,6 +91,29 @@ func generateCommand(c *cli.Context) error {
 	if err := hasura.CreateDefaultMetadataFromSchema(&defaultConfig); err != nil {
 		return errors.WithStack(err)
 	}
+
+	return nil
+}
+
+func applyCommand(c *cli.Context) error {
+	envFile := c.String("envfile")
+	logrus.Info(envFile)
+	run, err := hasura.NewEphemeralRuntime(
+		hasura.WithEnvFilepath(envFile),
+	)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	schema := c.String("schema")
+	name := c.String("name")
+	source := c.String("source")
+
+	if schemaOverride := c.Args().First(); schemaOverride != "" {
+		schema = schemaOverride
+	}
+
+	run.ApplyPGTableCustomizationForAllTables(schema, name, source)
 
 	return nil
 }
