@@ -41,6 +41,7 @@ func (r *EphemeralRuntime) setPGTableCustomization(table TableDefinition, source
 	if err != nil {
 		logrus.Warn(errors.WithStack(err))
 		logrus.Warn("response code: ", res.StatusCode())
+		return nil
 	}
 
 	logrus.Info("response code: ", res.StatusCode())
@@ -76,7 +77,10 @@ func (r *EphemeralRuntime) renamePGTableRelationshipsQuery(table TableDefinition
 	if err != nil {
 		logrus.Warn(errors.WithStack(err))
 		logrus.Warn("response code: ", res.StatusCode())
+		return
 	}
+
+	logrus.Info("response code: ", res.StatusCode())
 }
 
 func (r *EphemeralRuntime) renamePGTableRelationships(table TableDefinition, sourceName string) error {
