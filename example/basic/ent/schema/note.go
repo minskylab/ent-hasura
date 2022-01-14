@@ -23,13 +23,13 @@ func (n Note) Annotations() []schema.Annotation {
 			Role: "user",
 			SelectPermission: &hasura.PermissionSelect{
 				Filter:            hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
-				Columns:           hasura.AllFields(n),
+				AllColumns:        true,
 				AllowAggregations: true,
 			},
 			UpdatePermission: &hasura.PermissionUpdate{
-				Check:   hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
-				Filter:  hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
-				Columns: hasura.AllFields(n),
+				Check:      hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
+				Filter:     hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
+				AllColumns: true,
 			},
 		},
 	}

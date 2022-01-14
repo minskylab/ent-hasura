@@ -4,7 +4,7 @@ const (
 	pgCreateInsertPermission = "pg_create_insert_permission"
 	pgCreateSelectPermission = "pg_create_select_permission"
 	pgCreateUpdatePermission = "pg_create_update_permission"
-	pgCreateDeletePermission = "pg_create_update_permission"
+	pgCreateDeletePermission = "pg_create_delete_permission"
 )
 
 type PGCreateInsertPermissionArgs struct {

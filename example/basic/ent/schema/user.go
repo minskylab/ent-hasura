@@ -19,13 +19,13 @@ func (u User) Annotations() []schema.Annotation {
 			Role: "user",
 			SelectPermission: &hasura.PermissionSelect{
 				Filter:            hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
-				Columns:           hasura.AllFields(u),
+				AllColumns:        true,
 				AllowAggregations: true,
 			},
 			UpdatePermission: &hasura.PermissionUpdate{
-				Check:   hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
-				Filter:  hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
-				Columns: hasura.AllFields(u),
+				Check:      hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
+				Filter:     hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
+				AllColumns: true,
 			},
 		},
 	}
