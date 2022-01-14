@@ -30,6 +30,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gookit/config/v2 v2.0.27
 	github.com/joho/godotenv v1.4.0
+	github.com/lib/pq v1.10.4
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/urfave/cli/v2 v2.3.0

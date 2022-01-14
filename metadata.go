@@ -30,7 +30,7 @@ type Configuration struct {
 
 type Using struct {
 	// ForeignKeyConstraintOn string `json:"foreign_key_constraint_on"`
-	ForeignKeyConstraintOn interface{} `json:"foreign_key_constraint_on"`
+	ForeignKeyConstraintOn interface{} `json:"foreign_key_constraint_on,omitempty"`
 }
 
 type ObjectRelationship struct {
@@ -42,68 +42,52 @@ type ID struct {
 	Eq string `json:"_eq"`
 }
 
-type Organization struct {
-	ID ID `json:"id"`
-}
-
-type Check struct {
-	Organization Organization `json:"organization"`
-}
-
-type Set struct {
-	OrganizationAreas string `json:"organization_areas"`
-}
-
 type PermissionInsert struct {
 	Check       map[string]interface{} `json:"check"`
-	Set         map[string]interface{} `json:"set"`
-	Columns     []string               `json:"columns"`
-	BackendOnly bool                   `json:"backend_only"`
+	Set         map[string]interface{} `json:"set,omitempty"`
+	Columns     []string               `json:"columns,omitempty"`
+	BackendOnly bool                   `json:"backend_only,omitempty"`
 }
 
 type InsertPermission struct {
-	Role       string           `json:"role"`
-	Permission PermissionInsert `json:"permission"`
-}
-
-type Filter struct {
-	Organization Organization `json:"organization"`
+	Role       string           `json:"role,omitempty"`
+	Permission PermissionInsert `json:"permission,omitempty"`
 }
 
 type PermissionSelect struct {
-	Columns           []string               `json:"columns"`
-	Filter            map[string]interface{} `json:"filter"`
-	AllowAggregations bool                   `json:"allow_aggregations"`
+	Columns           []string               `json:"columns,omitempty"`
+	Filter            map[string]interface{} `json:"filter,omitempty"`
+	AllowAggregations bool                   `json:"allow_aggregations,omitempty"`
 }
 
 type SelectPermission struct {
-	Role       string           `json:"role"`
-	Permission PermissionSelect `json:"permission"`
+	Role       string           `json:"role,omitempty"`
+	Permission PermissionSelect `json:"permission,omitempty"`
 }
 
 type PermissionUpdate struct {
-	Columns []string               `json:"columns"`
-	Filter  map[string]interface{} `json:"filter"`
-	Check   map[string]interface{} `json:"check"`
+	Columns []string               `json:"columns,omitempty"`
+	Filter  map[string]interface{} `json:"filter,omitempty"`
+	Check   map[string]interface{} `json:"check,omitempty"`
 }
 
 type UpdatePermission struct {
-	Role       string           `json:"role"`
-	Permission PermissionUpdate `json:"permission"`
+	Role       string           `json:"role,omitempty"`
+	Permission PermissionUpdate `json:"permission,omitempty"`
 }
 
 type PermissionDelete struct {
-	Filter map[string]interface{} `json:"filter"`
+	Filter map[string]interface{} `json:"filter,omitempty"`
 }
 
 type DeletePermission struct {
-	Role       string           `json:"role"`
-	Permission PermissionDelete `json:"permission"`
+	Role       string           `json:"role,omitempty"`
+	Permission PermissionDelete `json:"permission,omitempty"`
 }
 
 type ForeignKeyConstraintOn struct {
-	Column string `json:"column"`
-	Table  Table  `json:"table"`
+	Column string `json:"column,omitempty"`
+	Table  Table  `json:"table,omitempty"`
 }
 
 type UsingArray struct {

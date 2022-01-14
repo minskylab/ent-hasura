@@ -49,6 +49,7 @@ func NewEphemeralRuntime(options ...EphemeralRuntimeOption) (*EphemeralRuntime, 
 		return nil, errors.WithStack(err)
 	}
 
+	logrus.Info(conf.Endpoint)
 	return &EphemeralRuntime{
 		Client:      resty.New(),
 		AdminSecret: config.Getenv("HASURA_GRAPHQL_ADMIN_SECRET", ""),

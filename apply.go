@@ -2,6 +2,7 @@ package hasura
 
 import (
 	"fmt"
+	"strings"
 
 	"entgo.io/ent/entc"
 	"entgo.io/ent/entc/gen"
@@ -46,7 +47,7 @@ func (r *EphemeralRuntime) setPGTableCustomization(table TableDefinition, source
 		return nil
 	}
 
-	logrus.Info("response code: ", res.StatusCode())
+	// logrus.Info("response code: ", res.StatusCode())
 
 	return nil
 }
@@ -82,7 +83,7 @@ func (r *EphemeralRuntime) renamePGTableRelationshipsQuery(table TableDefinition
 		return nil
 	}
 
-	logrus.Info("response code: ", res.StatusCode())
+	// logrus.Info("response code: ", res.StatusCode())
 
 	return nil
 }
@@ -107,7 +108,7 @@ type PGCreateArrayUsing struct {
 // 	Columns []string `json:"columns"`
 // }
 
-func (r *EphemeralRuntime) createPGRelationship(table TableDefinition, sourceName string, body ActionBody) error {
+func (r *EphemeralRuntime) genericHasuraMetadataQuery(body ActionBody) error {
 	endpoint := fmt.Sprintf("%s/v1/metadata", r.Config.Endpoint)
 
 	res, err := r.Client.R().
@@ -120,17 +121,17 @@ func (r *EphemeralRuntime) createPGRelationship(table TableDefinition, sourceNam
 		Post(endpoint)
 	if err != nil {
 		logrus.Warn(errors.WithStack(err))
-		logrus.Warn("response code: ", res.StatusCode())
+		logrus.Warn("response: ", res.StatusCode(), " ", res.String())
 		return nil
 	}
 
-	logrus.Info("response code: ", res.StatusCode())
+	logrus.Info("response: ", res.StatusCode(), " ", res.String())
 
 	return nil
 }
 
 func (r *EphemeralRuntime) createPGObjectRelationships(table TableDefinition, rel *ObjectRelationship, sourceName string) error {
-	return r.createPGRelationship(table, sourceName, ActionBody{
+	return r.genericHasuraMetadataQuery(ActionBody{
 		Type: pgTableCreateObjectRelation,
 		Args: PGCreateRelationship{
 			Table:  table.Table.Name,
@@ -142,7 +143,7 @@ func (r *EphemeralRuntime) createPGObjectRelationships(table TableDefinition, re
 }
 
 func (r *EphemeralRuntime) createPGArrayRelationships(table TableDefinition, rel *ArrayRelationship, sourceName string) error {
-	return r.createPGRelationship(table, sourceName, ActionBody{
+	return r.genericHasuraMetadataQuery(ActionBody{
 		Type: pgTableCreateArrayRelation,
 		Args: PGCreateRelationship{
 			Table:  table.Table.Name,
@@ -177,7 +178,7 @@ func (r *EphemeralRuntime) renamePGTableRelationships(table TableDefinition, sou
 	return nil
 }
 
-func (r *EphemeralRuntime) ApplyPGTableCustomizationForAllTables(schemaRoute, schemaName, sourceName string) error {
+func (r *EphemeralRuntime) TrackAllTables(schemaRoute, schemaName, sourceName string) error {
 	graph, err := entc.LoadGraph(schemaRoute, &gen.Config{})
 	if err != nil {
 		return errors.WithStack(err)
@@ -188,16 +189,176 @@ func (r *EphemeralRuntime) ApplyPGTableCustomizationForAllTables(schemaRoute, sc
 		return errors.WithStack(err)
 	}
 
-	for _, table := range tables {
-		logrus.Info("pushing set table customization for table: ", table.Table.Name)
-		if err := r.setPGTableCustomization(*table, sourceName); err != nil {
+	for _, def := range tables {
+		logrus.Info("tracking table: ", def.Table.Name)
+		if err := r.pgTrackTable(def.Table.Name, sourceName); err != nil {
+			logrus.Warn(errors.WithStack(err))
+		}
+	}
+
+	return nil
+}
+
+func (r *EphemeralRuntime) ApplyPGTableCustomizationForAllTables(schemaRoute, schemaName, sourceName string) error {
+	r.TrackAllTables(schemaRoute, schemaName, sourceName)
+
+	graph, err := entc.LoadGraph(schemaRoute, &gen.Config{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	tables, err := obtainHasuraTablesFromEntSchema(graph, schemaName)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for _, def := range tables {
+		logrus.Info("pushing set table customization for table: ", def.Table.Name)
+		if err := r.setPGTableCustomization(*def, sourceName); err != nil {
 			return errors.WithStack(err)
 		}
 
-		logrus.Info("pushing create table relationships for table: ", table.Table.Name)
-		if err := r.createPGTableRelationships(*table, sourceName); err != nil {
+		logrus.Info("pushing create table relationships for table: ", def.Table.Name)
+		if err := r.createPGTableRelationships(*def, sourceName); err != nil {
 			return errors.WithStack(err)
 		}
+	}
+
+	if err := r.ApplyPGPermissionsForAllTables(schemaRoute, schemaName, sourceName); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func (r *EphemeralRuntime) ApplyPGPermissionsForAllTables(schemaRoute, schemaName, sourceName string) error {
+	graph, err := entc.LoadGraph(schemaRoute, &gen.Config{})
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	for _, node := range graph.Nodes {
+		permAnn, isOk := node.Annotations[hasuraPermissionsRoleAnnotationName].(map[string]interface{})
+		if !isOk {
+			logrus.Warn("skipping node: ", node.Name, " as it does not have permissions annotation")
+			continue
+		}
+
+		role, isOk := permAnn["role"].(string)
+		if !isOk {
+			logrus.Warn("skipping node: ", node.Name, " as it does not have permissions role name in annotation")
+			continue
+		}
+
+		// fmt.Println(node.Name, role)
+
+		insertPermission, isOk := permAnn["insert_permission"].(map[string]interface{})
+		if isOk {
+			logrus.Info("creating insert permission for table: ", node.Table(), " with role: ", role)
+			if err := r.pgCreateInsertPermission(insertPermission, node.Table(), role, sourceName); err != nil {
+				logrus.Warn(errors.WithStack(err))
+				continue
+			}
+			for _, edge := range node.Edges {
+				if !edge.IsInverse() && !edge.OwnFK() {
+					tableName := edge.Rel.Table
+					levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
+					insertPermission["columns"] = edge.Rel.Columns
+					insertPermission["check"] = map[string]interface{}{
+						levelUp: insertPermission["check"],
+					}
+
+					logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
+					if err := r.pgCreateInsertPermission(insertPermission, tableName, role, sourceName); err != nil {
+						logrus.Warn(errors.WithStack(err))
+						continue
+					}
+				}
+			}
+		}
+
+		selectPermission, isOk := permAnn["select_permission"].(map[string]interface{})
+		if isOk {
+			logrus.Info("creating select permission for table: ", node.Table(), " with role: ", role)
+			if err := r.pgCreateSelectPermission(selectPermission, node.Table(), role, sourceName); err != nil {
+				logrus.Warn(errors.WithStack(err))
+				continue
+			}
+
+			for _, edge := range node.Edges {
+				if !edge.IsInverse() && !edge.OwnFK() {
+					tableName := edge.Rel.Table
+					levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
+					selectPermission["columns"] = edge.Rel.Columns
+					selectPermission["filter"] = map[string]interface{}{
+						levelUp: selectPermission["filter"],
+					}
+
+					logrus.Info("creating [edge] select permission for table: ", tableName, " with role: ", role)
+					if err := r.pgCreateSelectPermission(selectPermission, tableName, role, sourceName); err != nil {
+						logrus.Warn(errors.WithStack(err))
+						continue
+					}
+				}
+			}
+		}
+
+		updatePermission, isOk := permAnn["update_permission"].(map[string]interface{})
+		if isOk {
+			logrus.Info("creating update permission for table: ", node.Table(), " with role: ", role)
+			if err := r.pgCreateUpdatePermission(updatePermission, node.Table(), role, sourceName); err != nil {
+				logrus.Warn(errors.WithStack(err))
+				continue
+			}
+
+			for _, edge := range node.Edges {
+				// logrus.Warn(edge.IsInverse())
+				if !edge.IsInverse() && !edge.OwnFK() {
+					// logrus.Warn("[USING]")
+					tableName := edge.Rel.Table
+					levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
+					updatePermission["columns"] = edge.Rel.Columns
+					updatePermission["check"] = map[string]interface{}{
+						levelUp: updatePermission["check"],
+					}
+					updatePermission["filter"] = map[string]interface{}{
+						levelUp: updatePermission["filter"],
+					}
+
+					logrus.Info("creating [edge] update permission for table: ", tableName, " with role: ", role)
+					if err := r.pgCreateUpdatePermission(updatePermission, tableName, role, sourceName); err != nil {
+						logrus.Warn(errors.WithStack(err))
+						continue
+					}
+				}
+			}
+		}
+
+		deletePermission, isOk := permAnn["delete_permission"].(map[string]interface{})
+		if isOk {
+			logrus.Info("creating delete permission for table: ", node.Table(), " with role: ", role)
+			if err := r.pgCreateDeletePermission(deletePermission, node.Table(), role, sourceName); err != nil {
+				logrus.Warn(errors.WithStack(err))
+				continue
+			}
+
+			for _, edge := range node.Edges {
+				if !edge.IsInverse() && !edge.OwnFK() {
+					tableName := edge.Rel.Table
+					levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
+					deletePermission["filter"] = map[string]interface{}{
+						levelUp: deletePermission["filter"],
+					}
+
+					logrus.Info("creating [edge] delete permission for table: ", tableName, " with role: ", role)
+					if err := r.pgCreateDeletePermission(deletePermission, tableName, role, sourceName); err != nil {
+						logrus.Warn(errors.WithStack(err))
+						continue
+					}
+				}
+			}
+		}
+
 	}
 
 	return nil

@@ -32,6 +32,12 @@ func (nc *NoteCreate) SetContent(s string) *NoteCreate {
 	return nc
 }
 
+// SetID sets the "id" field.
+func (nc *NoteCreate) SetID(i int) *NoteCreate {
+	nc.mutation.SetID(i)
+	return nc
+}
+
 // AddAuthorIDs adds the "authors" edge to the User entity by IDs.
 func (nc *NoteCreate) AddAuthorIDs(ids ...int) *NoteCreate {
 	nc.mutation.AddAuthorIDs(ids...)
@@ -137,8 +143,10 @@ func (nc *NoteCreate) sqlSave(ctx context.Context) (*Note, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != _node.ID {
+		id := _spec.ID.Value.(int64)
+		_node.ID = int(id)
+	}
 	return _node, nil
 }
 
@@ -153,6 +161,10 @@ func (nc *NoteCreate) createSpec() (*Note, *sqlgraph.CreateSpec) {
 			},
 		}
 	)
+	if id, ok := nc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = id
+	}
 	if value, ok := nc.mutation.Title(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
@@ -232,7 +244,7 @@ func (ncb *NoteCreateBulk) Save(ctx context.Context) ([]*Note, error) {
 				}
 				mutation.id = &nodes[i].ID
 				mutation.done = true
-				if specs[i].ID.Value != nil {
+				if specs[i].ID.Value != nil && nodes[i].ID == 0 {
 					id := specs[i].ID.Value.(int64)
 					nodes[i].ID = int(id)
 				}
