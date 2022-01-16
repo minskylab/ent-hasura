@@ -7,6 +7,7 @@ import (
 
 	"entgo.io/ent/entc"
 	"entgo.io/ent/entc/gen"
+	"github.com/iancoleman/strcase"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -313,7 +314,8 @@ func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, nodeTab
 			}
 
 			// allColumns := r.autocompleteWithAllColumns(edge.Rel)
-			levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
+			levelUp := strcase.ToLowerCamel(strings.TrimSuffix(edge.Rel.Column(), "_id"))
+			// strcase.ToCamel(levelUp)
 			permission["columns"] = edge.Rel.Columns
 			permission["check"] = map[string]interface{}{
 				levelUp: permission["check"],
@@ -352,7 +354,7 @@ func (r *EphemeralRuntime) autocompleteWithAllColumns(node *gen.Type) []string {
 		}
 	}
 
-	logrus.Warn(columns)
+	// logrus.Warn(columns)
 
 	return columns
 }
