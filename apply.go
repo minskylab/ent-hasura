@@ -289,11 +289,7 @@ func (r *EphemeralRuntime) ApplyPGPermissionsForAllTables(schemaRoute, schemaNam
 }
 
 func (r *EphemeralRuntime) pgCreateAllXPermissionforNode(op HasuraOperation, perm map[string]interface{}, node *gen.Type, role string, sourceName string, allColumns []string) error {
-	if allColumns, isOk := perm["all_columns"].(bool); isOk && allColumns {
-		perm["columns"] = allColumns
-	}
-
-	if err := r.pgCreateXPermission(op, perm, node.Table(), role, sourceName); err != nil {
+	if err := r.pgCreateXPermission(op, perm, node.Table(), role, sourceName, allColumns...); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -304,6 +300,7 @@ func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, node *g
 	for _, edge := range node.Edges {
 		if !edge.IsInverse() && !edge.OwnFK() {
 			tableName := edge.Rel.Table
+			// allColumns := r.autocompleteWithAllColumns(edge.Rel)
 			levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
 			permission["columns"] = edge.Rel.Columns
 			permission["check"] = map[string]interface{}{

@@ -45,7 +45,12 @@ func (r *EphemeralRuntime) pgCreateXPermission(
 	tableName,
 	role,
 	source string,
+	allColumns ...string,
 ) error {
+	if allColumnsFlag, isOk := perm["all_columns"].(bool); isOk && allColumnsFlag && len(allColumns) > 0 {
+		perm["columns"] = allColumns
+	}
+
 	switch operation {
 	case pgCreateInsertPermission:
 		return r.pgCreateInsertPermission(perm, tableName, role, source)
