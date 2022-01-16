@@ -1,6 +1,8 @@
 package hasura
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type HasuraOperation string
 

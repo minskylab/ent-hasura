@@ -1,6 +1,8 @@
 package hasura
 
 import (
+	"time"
+
 	"github.com/go-resty/resty/v2"
 	"github.com/gookit/config/v2"
 	"github.com/joho/godotenv"
@@ -12,6 +14,8 @@ type EphemeralRuntime struct {
 	Client      *resty.Client
 	Config      *HasuraConfig
 	AdminSecret string
+
+	operatedTables map[string]map[string]time.Time
 }
 
 type EphemeralRuntimeOptions struct {

@@ -3,6 +3,7 @@ package hasura
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent/entc"
 	"entgo.io/ent/entc/gen"
@@ -178,12 +179,28 @@ func (r *EphemeralRuntime) renamePGTableRelationships(table TableDefinition, sou
 	return nil
 }
 
-func (r *EphemeralRuntime) TrackAllTables(schemaRoute, schemaName, sourceName string) error {
+func (r *EphemeralRuntime) ApplyPGFullProcessForAllTables(schemaRoute, schemaName, sourceName string) error {
 	graph, err := entc.LoadGraph(schemaRoute, &gen.Config{})
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
+	if err := r.TrackAllTables(graph, schemaName, sourceName); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := r.ApplyPGTableCustomizationForAllTables(graph, schemaName, sourceName); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := r.ApplyPGPermissionsForAllTables(graph, schemaName, sourceName); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
+func (r *EphemeralRuntime) TrackAllTables(graph *gen.Graph, schemaName, sourceName string) error {
 	tables, err := obtainHasuraTablesFromEntSchema(graph, schemaName)
 	if err != nil {
 		return errors.WithStack(err)
@@ -199,14 +216,7 @@ func (r *EphemeralRuntime) TrackAllTables(schemaRoute, schemaName, sourceName st
 	return nil
 }
 
-func (r *EphemeralRuntime) ApplyPGTableCustomizationForAllTables(schemaRoute, schemaName, sourceName string) error {
-	r.TrackAllTables(schemaRoute, schemaName, sourceName)
-
-	graph, err := entc.LoadGraph(schemaRoute, &gen.Config{})
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
+func (r *EphemeralRuntime) ApplyPGTableCustomizationForAllTables(graph *gen.Graph, schemaName, sourceName string) error {
 	tables, err := obtainHasuraTablesFromEntSchema(graph, schemaName)
 	if err != nil {
 		return errors.WithStack(err)
@@ -224,18 +234,17 @@ func (r *EphemeralRuntime) ApplyPGTableCustomizationForAllTables(schemaRoute, sc
 		}
 	}
 
-	if err := r.ApplyPGPermissionsForAllTables(schemaRoute, schemaName, sourceName); err != nil {
-		return errors.WithStack(err)
-	}
-
 	return nil
 }
 
-func (r *EphemeralRuntime) ApplyPGPermissionsForAllTables(schemaRoute, schemaName, sourceName string) error {
-	graph, err := entc.LoadGraph(schemaRoute, &gen.Config{})
-	if err != nil {
-		return errors.WithStack(err)
+func (r *EphemeralRuntime) ApplyPGPermissionsForAllTables(graph *gen.Graph, schemaName, sourceName string) error {
+	if r.operatedTables == nil {
+		r.operatedTables = make(map[string]map[string]time.Time)
 	}
+
+	operationName := "permissions"
+
+	r.operatedTables[operationName] = make(map[string]time.Time)
 
 	for _, node := range graph.Nodes {
 		permAnn, isOk := node.Annotations[hasuraPermissionsRoleAnnotationName].(map[string]interface{})
@@ -250,62 +259,75 @@ func (r *EphemeralRuntime) ApplyPGPermissionsForAllTables(schemaRoute, schemaNam
 			continue
 		}
 
-		// if allColumns, isOk := perm["all_columns"].(bool); isOk && allColumns {
-		// 	perm["columns"] = r.autocompleteWithAllColumns(node)
-		// }
 		allColumns := r.autocompleteWithAllColumns(node)
-		// fmt.Println(node.Name, role)
 
 		if insertPermission, isOk := permAnn["insert_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating insert permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateAllXPermissionforNode(pgCreateInsertPermission, insertPermission, node, role, sourceName, allColumns); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateInsertPermission, operationName, insertPermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
 			}
 		}
 
 		if selectPermission, isOk := permAnn["select_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating select permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateAllXPermissionforNode(pgCreateSelectPermission, selectPermission, node, role, sourceName, allColumns); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateSelectPermission, operationName, selectPermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
 			}
 		}
 
 		if updatePermission, isOk := permAnn["update_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating update permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateAllXPermissionforNode(pgCreateUpdatePermission, updatePermission, node, role, sourceName, allColumns); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateUpdatePermission, operationName, updatePermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
 			}
 		}
 
 		if deletePermission, isOk := permAnn["delete_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating delete permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateAllXPermissionforNode(pgCreateDeletePermission, deletePermission, node, role, sourceName, allColumns); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateDeletePermission, operationName, deletePermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
 			}
 		}
 	}
 
+	// r.operatedTables[operationName] = make(map[string]time.Time)
+
 	return nil
 }
 
-func (r *EphemeralRuntime) pgCreateAllXPermissionforNode(op HasuraOperation, perm map[string]interface{}, node *gen.Type, role string, sourceName string, allColumns []string) error {
+func (r *EphemeralRuntime) pgCreateAllXPermissionforNode(op HasuraOperation, operationName string, perm map[string]interface{}, node *gen.Type, role string, sourceName string, allColumns []string) error {
+	if _, exist := r.operatedTables[operationName][node.Table()]; exist {
+		return nil
+	}
+
 	if err := r.pgCreateXPermission(op, perm, node.Table(), role, sourceName, allColumns...); err != nil {
 		return errors.WithStack(err)
 	}
 
-	return r.createXPermissionForEdges(op, node, perm, role, sourceName)
+	r.operatedTables[operationName][node.Table()] = time.Now()
+
+	return r.createXPermissionForEdges(op, operationName, node, perm, role, sourceName)
 }
 
-func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, node *gen.Type, permission map[string]interface{}, role string, sourceName string) error {
+func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, operationName string, node *gen.Type, permission map[string]interface{}, role string, sourceName string) error {
 	for _, edge := range node.Edges {
 		if !edge.IsInverse() && !edge.OwnFK() {
 			tableName := edge.Rel.Table
+
+			if _, exist := r.operatedTables[operationName][tableName]; exist {
+				continue
+			}
+
 			// allColumns := r.autocompleteWithAllColumns(edge.Rel)
 			levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
 			permission["columns"] = edge.Rel.Columns
 			permission["check"] = map[string]interface{}{
 				levelUp: permission["check"],
 			}
+
+			logrus.Warn(edge.Rel.Columns)
+
+			r.operatedTables[operationName][tableName] = time.Now()
 
 			logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
 			if err := r.pgCreateXPermission(op, permission, tableName, role, sourceName); err != nil {
@@ -326,6 +348,10 @@ func (r *EphemeralRuntime) autocompleteWithAllColumns(node *gen.Type) []string {
 	}
 
 	for _, e := range node.Edges {
+		// if e.IsInverse() {
+		// 	columns = append(columns, e.Ref.Name)
+		// }
+
 		if e.OwnFK() {
 			columns = append(columns, e.Rel.Columns...)
 		}

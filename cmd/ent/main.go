@@ -113,7 +113,7 @@ func applyCommand(c *cli.Context) error {
 		schema = schemaOverride
 	}
 
-	run.ApplyPGTableCustomizationForAllTables(schema, name, source)
+	run.ApplyPGFullProcessForAllTables(schema, name, source)
 
 	return nil
 }
