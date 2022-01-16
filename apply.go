@@ -104,33 +104,6 @@ type PGCreateArrayUsing struct {
 	ForeignKeyConstraintOn ForeignKeyConstraintOn `json:"foreign_key_constraint_on"`
 }
 
-// type ForeignKeyConstraintOn struct {
-// 	Table   string   `json:"table"`
-// 	Columns []string `json:"columns"`
-// }
-
-func (r *EphemeralRuntime) genericHasuraMetadataQuery(body ActionBody) error {
-	endpoint := fmt.Sprintf("%s/v1/metadata", r.Config.Endpoint)
-
-	res, err := r.Client.R().
-		SetHeaders(map[string]string{
-			"Content-Type":          "application/json",
-			"X-Hasura-Role":         "admin",
-			"X-Hasura-Admin-Secret": r.AdminSecret,
-		}).
-		SetBody(body).
-		Post(endpoint)
-	if err != nil {
-		logrus.Warn(errors.WithStack(err))
-		logrus.Warn("response: ", res.StatusCode(), " ", res.String())
-		return nil
-	}
-
-	logrus.Info("response: ", res.StatusCode(), " ", res.String())
-
-	return nil
-}
-
 func (r *EphemeralRuntime) createPGObjectRelationships(table TableDefinition, rel *ObjectRelationship, sourceName string) error {
 	return r.genericHasuraMetadataQuery(ActionBody{
 		Type: pgTableCreateObjectRelation,
@@ -182,6 +155,10 @@ func (r *EphemeralRuntime) renamePGTableRelationships(table TableDefinition, sou
 func (r *EphemeralRuntime) ApplyPGFullProcessForAllTables(schemaRoute, schemaName, sourceName string) error {
 	graph, err := entc.LoadGraph(schemaRoute, &gen.Config{})
 	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err := r.resetMetadata(); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -242,9 +219,13 @@ func (r *EphemeralRuntime) ApplyPGPermissionsForAllTables(graph *gen.Graph, sche
 		r.operatedTables = make(map[string]map[string]time.Time)
 	}
 
-	operationName := "permissions"
+	nodeTables := []string{} // "permissions"
 
-	r.operatedTables[operationName] = make(map[string]time.Time)
+	for _, n := range graph.Nodes {
+		nodeTables = append(nodeTables, n.Table())
+	}
+
+	// r.operatedTables[nodeTables] = make(map[string]time.Time)
 
 	for _, node := range graph.Nodes {
 		permAnn, isOk := node.Annotations[hasuraPermissionsRoleAnnotationName].(map[string]interface{})
@@ -263,28 +244,28 @@ func (r *EphemeralRuntime) ApplyPGPermissionsForAllTables(graph *gen.Graph, sche
 
 		if insertPermission, isOk := permAnn["insert_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating insert permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateAllXPermissionforNode(pgCreateInsertPermission, operationName, insertPermission, node, role, sourceName, allColumns); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateInsertPermission, nodeTables, insertPermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
 			}
 		}
 
 		if selectPermission, isOk := permAnn["select_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating select permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateAllXPermissionforNode(pgCreateSelectPermission, operationName, selectPermission, node, role, sourceName, allColumns); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateSelectPermission, nodeTables, selectPermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
 			}
 		}
 
 		if updatePermission, isOk := permAnn["update_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating update permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateAllXPermissionforNode(pgCreateUpdatePermission, operationName, updatePermission, node, role, sourceName, allColumns); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateUpdatePermission, nodeTables, updatePermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
 			}
 		}
 
 		if deletePermission, isOk := permAnn["delete_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating delete permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateAllXPermissionforNode(pgCreateDeletePermission, operationName, deletePermission, node, role, sourceName, allColumns); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateDeletePermission, nodeTables, deletePermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
 			}
 		}
@@ -295,26 +276,39 @@ func (r *EphemeralRuntime) ApplyPGPermissionsForAllTables(graph *gen.Graph, sche
 	return nil
 }
 
-func (r *EphemeralRuntime) pgCreateAllXPermissionforNode(op HasuraOperation, operationName string, perm map[string]interface{}, node *gen.Type, role string, sourceName string, allColumns []string) error {
-	if _, exist := r.operatedTables[operationName][node.Table()]; exist {
-		return nil
-	}
+func (r *EphemeralRuntime) pgCreateAllXPermissionforNode(op HasuraOperation, nodeTables []string, perm map[string]interface{}, node *gen.Type, role string, sourceName string, allColumns []string) error {
+	// if _, exist := r.operatedTables[operationName][node.Table()]; exist {
+	// 	return nil
+	// }
 
 	if err := r.pgCreateXPermission(op, perm, node.Table(), role, sourceName, allColumns...); err != nil {
 		return errors.WithStack(err)
 	}
 
-	r.operatedTables[operationName][node.Table()] = time.Now()
+	// r.operatedTables[operationName][node.Table()] = time.Now()
 
-	return r.createXPermissionForEdges(op, operationName, node, perm, role, sourceName)
+	return r.createXPermissionForEdges(op, nodeTables, node, perm, role, sourceName)
 }
 
-func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, operationName string, node *gen.Type, permission map[string]interface{}, role string, sourceName string) error {
+func isNodeTable(nodeTables []string, tableName string) bool {
+	for _, nodeTable := range nodeTables {
+		if nodeTable == tableName {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, nodeTables []string, node *gen.Type, permission map[string]interface{}, role string, sourceName string) error {
 	for _, edge := range node.Edges {
 		if !edge.IsInverse() && !edge.OwnFK() {
 			tableName := edge.Rel.Table
 
-			if _, exist := r.operatedTables[operationName][tableName]; exist {
+			// if _, exist := r.operatedTables[operationName][tableName]; exist {
+			// 	continue
+			// }
+			if isNodeTable(nodeTables, tableName) {
 				continue
 			}
 
@@ -327,7 +321,7 @@ func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, operati
 
 			logrus.Warn(edge.Rel.Columns)
 
-			r.operatedTables[operationName][tableName] = time.Now()
+			// r.operatedTables[operationName][tableName] = time.Now()
 
 			logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
 			if err := r.pgCreateXPermission(op, permission, tableName, role, sourceName); err != nil {
