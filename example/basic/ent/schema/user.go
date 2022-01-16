@@ -44,5 +44,6 @@ func (User) Fields() []ent.Field {
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("notes", Note.Type),
+		edge.To("likes", Like.Type),
 	}
 }

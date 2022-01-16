@@ -250,116 +250,91 @@ func (r *EphemeralRuntime) ApplyPGPermissionsForAllTables(schemaRoute, schemaNam
 			continue
 		}
 
+		// if allColumns, isOk := perm["all_columns"].(bool); isOk && allColumns {
+		// 	perm["columns"] = r.autocompleteWithAllColumns(node)
+		// }
+		allColumns := r.autocompleteWithAllColumns(node)
 		// fmt.Println(node.Name, role)
 
-		insertPermission, isOk := permAnn["insert_permission"].(map[string]interface{})
-		if isOk {
+		if insertPermission, isOk := permAnn["insert_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating insert permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateInsertPermission(insertPermission, node.Table(), role, sourceName); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateInsertPermission, insertPermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
-				continue
-			}
-			for _, edge := range node.Edges {
-				if !edge.IsInverse() && !edge.OwnFK() {
-					tableName := edge.Rel.Table
-					levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
-					insertPermission["columns"] = edge.Rel.Columns
-					insertPermission["check"] = map[string]interface{}{
-						levelUp: insertPermission["check"],
-					}
-
-					logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
-					if err := r.pgCreateInsertPermission(insertPermission, tableName, role, sourceName); err != nil {
-						logrus.Warn(errors.WithStack(err))
-						continue
-					}
-				}
 			}
 		}
 
-		selectPermission, isOk := permAnn["select_permission"].(map[string]interface{})
-		if isOk {
+		if selectPermission, isOk := permAnn["select_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating select permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateSelectPermission(selectPermission, node.Table(), role, sourceName); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateSelectPermission, selectPermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
-				continue
-			}
-
-			for _, edge := range node.Edges {
-				if !edge.IsInverse() && !edge.OwnFK() {
-					tableName := edge.Rel.Table
-					levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
-					selectPermission["columns"] = edge.Rel.Columns
-					selectPermission["filter"] = map[string]interface{}{
-						levelUp: selectPermission["filter"],
-					}
-
-					logrus.Info("creating [edge] select permission for table: ", tableName, " with role: ", role)
-					if err := r.pgCreateSelectPermission(selectPermission, tableName, role, sourceName); err != nil {
-						logrus.Warn(errors.WithStack(err))
-						continue
-					}
-				}
 			}
 		}
 
-		updatePermission, isOk := permAnn["update_permission"].(map[string]interface{})
-		if isOk {
+		if updatePermission, isOk := permAnn["update_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating update permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateUpdatePermission(updatePermission, node.Table(), role, sourceName); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateUpdatePermission, updatePermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
-				continue
-			}
-
-			for _, edge := range node.Edges {
-				// logrus.Warn(edge.IsInverse())
-				if !edge.IsInverse() && !edge.OwnFK() {
-					// logrus.Warn("[USING]")
-					tableName := edge.Rel.Table
-					levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
-					updatePermission["columns"] = edge.Rel.Columns
-					updatePermission["check"] = map[string]interface{}{
-						levelUp: updatePermission["check"],
-					}
-					updatePermission["filter"] = map[string]interface{}{
-						levelUp: updatePermission["filter"],
-					}
-
-					logrus.Info("creating [edge] update permission for table: ", tableName, " with role: ", role)
-					if err := r.pgCreateUpdatePermission(updatePermission, tableName, role, sourceName); err != nil {
-						logrus.Warn(errors.WithStack(err))
-						continue
-					}
-				}
 			}
 		}
 
-		deletePermission, isOk := permAnn["delete_permission"].(map[string]interface{})
-		if isOk {
+		if deletePermission, isOk := permAnn["delete_permission"].(map[string]interface{}); isOk {
 			logrus.Info("creating delete permission for table: ", node.Table(), " with role: ", role)
-			if err := r.pgCreateDeletePermission(deletePermission, node.Table(), role, sourceName); err != nil {
+			if err := r.pgCreateAllXPermissionforNode(pgCreateDeletePermission, deletePermission, node, role, sourceName, allColumns); err != nil {
 				logrus.Warn(errors.WithStack(err))
-				continue
-			}
-
-			for _, edge := range node.Edges {
-				if !edge.IsInverse() && !edge.OwnFK() {
-					tableName := edge.Rel.Table
-					levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
-					deletePermission["filter"] = map[string]interface{}{
-						levelUp: deletePermission["filter"],
-					}
-
-					logrus.Info("creating [edge] delete permission for table: ", tableName, " with role: ", role)
-					if err := r.pgCreateDeletePermission(deletePermission, tableName, role, sourceName); err != nil {
-						logrus.Warn(errors.WithStack(err))
-						continue
-					}
-				}
 			}
 		}
-
 	}
 
 	return nil
+}
+
+func (r *EphemeralRuntime) pgCreateAllXPermissionforNode(op HasuraOperation, perm map[string]interface{}, node *gen.Type, role string, sourceName string, allColumns []string) error {
+	if allColumns, isOk := perm["all_columns"].(bool); isOk && allColumns {
+		perm["columns"] = allColumns
+	}
+
+	if err := r.pgCreateXPermission(op, perm, node.Table(), role, sourceName); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return r.createXPermissionForEdges(op, node, perm, role, sourceName)
+}
+
+func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, node *gen.Type, permission map[string]interface{}, role string, sourceName string) error {
+	for _, edge := range node.Edges {
+		if !edge.IsInverse() && !edge.OwnFK() {
+			tableName := edge.Rel.Table
+			levelUp := strings.TrimSuffix(edge.Rel.Column(), "_id")
+			permission["columns"] = edge.Rel.Columns
+			permission["check"] = map[string]interface{}{
+				levelUp: permission["check"],
+			}
+
+			logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
+			if err := r.pgCreateXPermission(op, permission, tableName, role, sourceName); err != nil {
+				logrus.Warn(errors.WithStack(err))
+				continue
+			}
+		}
+	}
+
+	return nil
+}
+
+func (r *EphemeralRuntime) autocompleteWithAllColumns(node *gen.Type) []string {
+	columns := []string{node.ID.Name}
+
+	for _, f := range node.Fields {
+		columns = append(columns, f.Column().Name)
+	}
+
+	for _, e := range node.Edges {
+		if e.OwnFK() {
+			columns = append(columns, e.Rel.Columns...)
+		}
+	}
+
+	logrus.Warn(columns)
+
+	return columns
 }

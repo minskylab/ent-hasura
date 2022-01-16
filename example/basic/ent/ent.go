@@ -8,6 +8,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/minskylab/ent-hasura/example/basic/ent/like"
 	"github.com/minskylab/ent-hasura/example/basic/ent/note"
 	"github.com/minskylab/ent-hasura/example/basic/ent/user"
 )
@@ -30,6 +31,7 @@ type OrderFunc func(*sql.Selector)
 // columnChecker returns a function indicates if the column exists in the given column.
 func columnChecker(table string) func(string) error {
 	checks := map[string]func(string) bool{
+		like.Table: like.ValidColumn,
 		note.Table: note.ValidColumn,
 		user.Table: user.ValidColumn,
 	}

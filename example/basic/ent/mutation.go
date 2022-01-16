@@ -6,7 +6,9 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
+	"github.com/minskylab/ent-hasura/example/basic/ent/like"
 	"github.com/minskylab/ent-hasura/example/basic/ent/note"
 	"github.com/minskylab/ent-hasura/example/basic/ent/predicate"
 	"github.com/minskylab/ent-hasura/example/basic/ent/user"
@@ -23,9 +25,377 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
+	TypeLike = "Like"
 	TypeNote = "Note"
 	TypeUser = "User"
 )
+
+// LikeMutation represents an operation that mutates the Like nodes in the graph.
+type LikeMutation struct {
+	config
+	op             Op
+	typ            string
+	id             *int
+	created_at     *time.Time
+	clearedFields  map[string]struct{}
+	creator        *int
+	clearedcreator bool
+	done           bool
+	oldValue       func(context.Context) (*Like, error)
+	predicates     []predicate.Like
+}
+
+var _ ent.Mutation = (*LikeMutation)(nil)
+
+// likeOption allows management of the mutation configuration using functional options.
+type likeOption func(*LikeMutation)
+
+// newLikeMutation creates new mutation for the Like entity.
+func newLikeMutation(c config, op Op, opts ...likeOption) *LikeMutation {
+	m := &LikeMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeLike,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withLikeID sets the ID field of the mutation.
+func withLikeID(id int) likeOption {
+	return func(m *LikeMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Like
+		)
+		m.oldValue = func(ctx context.Context) (*Like, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Like.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withLike sets the old Like of the mutation.
+func withLike(node *Like) likeOption {
+	return func(m *LikeMutation) {
+		m.oldValue = func(context.Context) (*Like, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m LikeMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m LikeMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Like entities.
+func (m *LikeMutation) SetID(id int) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *LikeMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *LikeMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *LikeMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the Like entity.
+// If the Like object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *LikeMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *LikeMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetCreatorID sets the "creator" edge to the User entity by id.
+func (m *LikeMutation) SetCreatorID(id int) {
+	m.creator = &id
+}
+
+// ClearCreator clears the "creator" edge to the User entity.
+func (m *LikeMutation) ClearCreator() {
+	m.clearedcreator = true
+}
+
+// CreatorCleared reports if the "creator" edge to the User entity was cleared.
+func (m *LikeMutation) CreatorCleared() bool {
+	return m.clearedcreator
+}
+
+// CreatorID returns the "creator" edge ID in the mutation.
+func (m *LikeMutation) CreatorID() (id int, exists bool) {
+	if m.creator != nil {
+		return *m.creator, true
+	}
+	return
+}
+
+// CreatorIDs returns the "creator" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CreatorID instead. It exists only for internal usage by the builders.
+func (m *LikeMutation) CreatorIDs() (ids []int) {
+	if id := m.creator; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCreator resets all changes to the "creator" edge.
+func (m *LikeMutation) ResetCreator() {
+	m.creator = nil
+	m.clearedcreator = false
+}
+
+// Where appends a list predicates to the LikeMutation builder.
+func (m *LikeMutation) Where(ps ...predicate.Like) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// Op returns the operation name.
+func (m *LikeMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (Like).
+func (m *LikeMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *LikeMutation) Fields() []string {
+	fields := make([]string, 0, 1)
+	if m.created_at != nil {
+		fields = append(fields, like.FieldCreatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *LikeMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case like.FieldCreatedAt:
+		return m.CreatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *LikeMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case like.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown Like field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LikeMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case like.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Like field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *LikeMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *LikeMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *LikeMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Like numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *LikeMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *LikeMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *LikeMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Like nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *LikeMutation) ResetField(name string) error {
+	switch name {
+	case like.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown Like field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *LikeMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.creator != nil {
+		edges = append(edges, like.EdgeCreator)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *LikeMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case like.EdgeCreator:
+		if id := m.creator; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *LikeMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *LikeMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *LikeMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedcreator {
+		edges = append(edges, like.EdgeCreator)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *LikeMutation) EdgeCleared(name string) bool {
+	switch name {
+	case like.EdgeCreator:
+		return m.clearedcreator
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *LikeMutation) ClearEdge(name string) error {
+	switch name {
+	case like.EdgeCreator:
+		m.ClearCreator()
+		return nil
+	}
+	return fmt.Errorf("unknown Like unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *LikeMutation) ResetEdge(name string) error {
+	switch name {
+	case like.EdgeCreator:
+		m.ResetCreator()
+		return nil
+	}
+	return fmt.Errorf("unknown Like edge %s", name)
+}
 
 // NoteMutation represents an operation that mutates the Note nodes in the graph.
 type NoteMutation struct {
@@ -484,6 +854,9 @@ type UserMutation struct {
 	notes         map[int]struct{}
 	removednotes  map[int]struct{}
 	clearednotes  bool
+	likes         map[int]struct{}
+	removedlikes  map[int]struct{}
+	clearedlikes  bool
 	done          bool
 	oldValue      func(context.Context) (*User, error)
 	predicates    []predicate.User
@@ -700,6 +1073,60 @@ func (m *UserMutation) ResetNotes() {
 	m.removednotes = nil
 }
 
+// AddLikeIDs adds the "likes" edge to the Like entity by ids.
+func (m *UserMutation) AddLikeIDs(ids ...int) {
+	if m.likes == nil {
+		m.likes = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.likes[ids[i]] = struct{}{}
+	}
+}
+
+// ClearLikes clears the "likes" edge to the Like entity.
+func (m *UserMutation) ClearLikes() {
+	m.clearedlikes = true
+}
+
+// LikesCleared reports if the "likes" edge to the Like entity was cleared.
+func (m *UserMutation) LikesCleared() bool {
+	return m.clearedlikes
+}
+
+// RemoveLikeIDs removes the "likes" edge to the Like entity by IDs.
+func (m *UserMutation) RemoveLikeIDs(ids ...int) {
+	if m.removedlikes == nil {
+		m.removedlikes = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.likes, ids[i])
+		m.removedlikes[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedLikes returns the removed IDs of the "likes" edge to the Like entity.
+func (m *UserMutation) RemovedLikesIDs() (ids []int) {
+	for id := range m.removedlikes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// LikesIDs returns the "likes" edge IDs in the mutation.
+func (m *UserMutation) LikesIDs() (ids []int) {
+	for id := range m.likes {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetLikes resets all changes to the "likes" edge.
+func (m *UserMutation) ResetLikes() {
+	m.likes = nil
+	m.clearedlikes = false
+	m.removedlikes = nil
+}
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -835,9 +1262,12 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.notes != nil {
 		edges = append(edges, user.EdgeNotes)
+	}
+	if m.likes != nil {
+		edges = append(edges, user.EdgeLikes)
 	}
 	return edges
 }
@@ -852,15 +1282,24 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeLikes:
+		ids := make([]ent.Value, 0, len(m.likes))
+		for id := range m.likes {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.removednotes != nil {
 		edges = append(edges, user.EdgeNotes)
+	}
+	if m.removedlikes != nil {
+		edges = append(edges, user.EdgeLikes)
 	}
 	return edges
 }
@@ -875,15 +1314,24 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeLikes:
+		ids := make([]ent.Value, 0, len(m.removedlikes))
+		for id := range m.removedlikes {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearednotes {
 		edges = append(edges, user.EdgeNotes)
+	}
+	if m.clearedlikes {
+		edges = append(edges, user.EdgeLikes)
 	}
 	return edges
 }
@@ -894,6 +1342,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 	switch name {
 	case user.EdgeNotes:
 		return m.clearednotes
+	case user.EdgeLikes:
+		return m.clearedlikes
 	}
 	return false
 }
@@ -912,6 +1362,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 	switch name {
 	case user.EdgeNotes:
 		m.ResetNotes()
+		return nil
+	case user.EdgeLikes:
+		m.ResetLikes()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

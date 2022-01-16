@@ -28,9 +28,11 @@ type User struct {
 type UserEdges struct {
 	// Notes holds the value of the notes edge.
 	Notes []*Note `json:"notes,omitempty"`
+	// Likes holds the value of the likes edge.
+	Likes []*Like `json:"likes,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // NotesOrErr returns the Notes value or an error if the edge
@@ -40,6 +42,15 @@ func (e UserEdges) NotesOrErr() ([]*Note, error) {
 		return e.Notes, nil
 	}
 	return nil, &NotLoadedError{edge: "notes"}
+}
+
+// LikesOrErr returns the Likes value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) LikesOrErr() ([]*Like, error) {
+	if e.loadedTypes[1] {
+		return e.Likes, nil
+	}
+	return nil, &NotLoadedError{edge: "likes"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -92,6 +103,11 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 // QueryNotes queries the "notes" edge of the User entity.
 func (u *User) QueryNotes() *NoteQuery {
 	return (&UserClient{config: u.config}).QueryNotes(u)
+}
+
+// QueryLikes queries the "likes" edge of the User entity.
+func (u *User) QueryLikes() *LikeQuery {
+	return (&UserClient{config: u.config}).QueryLikes(u)
 }
 
 // Update returns a builder for updating this User.
