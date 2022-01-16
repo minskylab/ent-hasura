@@ -318,8 +318,9 @@ func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, nodeTab
 			permission["check"] = map[string]interface{}{
 				levelUp: permission["check"],
 			}
-
-			logrus.Warn(edge.Rel.Columns)
+			permission["filter"] = map[string]interface{}{
+				levelUp: permission["filter"],
+			}
 
 			// r.operatedTables[operationName][tableName] = time.Now()
 
