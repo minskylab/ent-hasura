@@ -14,6 +14,22 @@ type Note struct {
 	ent.Schema
 }
 
+// Fields of the Note.
+func (Note) Fields() []ent.Field {
+	return []ent.Field{
+		field.Int("id").Unique(),
+		field.String("title"),
+		field.String("content"),
+	}
+}
+
+// Edges of the Note.
+func (Note) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.From("authors", User.Type).Ref("notes"),
+	}
+}
+
 func (n Note) Annotations() []schema.Annotation {
 	logrus.Info("edges")
 	logrus.Info(n.Edges()[0].Descriptor().Field)
@@ -32,21 +48,5 @@ func (n Note) Annotations() []schema.Annotation {
 				AllColumns: true,
 			},
 		},
-	}
-}
-
-// Fields of the Note.
-func (Note) Fields() []ent.Field {
-	return []ent.Field{
-		field.Int("id").Unique(),
-		field.String("title"),
-		field.String("content"),
-	}
-}
-
-// Edges of the Note.
-func (Note) Edges() []ent.Edge {
-	return []ent.Edge{
-		edge.From("authors", User.Type).Required().Ref("notes"),
 	}
 }

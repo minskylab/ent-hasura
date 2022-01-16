@@ -13,6 +13,23 @@ type User struct {
 	ent.Schema
 }
 
+// Fields of the User.
+func (User) Fields() []ent.Field {
+	return []ent.Field{
+		field.Int("id").Unique(),
+		field.String("email").Unique(),
+		field.String("name"),
+	}
+}
+
+// Edges of the User.
+func (User) Edges() []ent.Edge {
+	return []ent.Edge{
+		edge.To("notes", Note.Type),
+		edge.To("likes", Like.Type),
+	}
+}
+
 func (u User) Annotations() []schema.Annotation {
 	return []schema.Annotation{
 		hasura.PermissionsRoleAnnotation{
@@ -28,22 +45,5 @@ func (u User) Annotations() []schema.Annotation {
 				AllColumns: true,
 			},
 		},
-	}
-}
-
-// Fields of the User.
-func (User) Fields() []ent.Field {
-	return []ent.Field{
-		field.Int("id").Unique(),
-		field.String("email").Unique(),
-		field.String("name"),
-	}
-}
-
-// Edges of the User.
-func (User) Edges() []ent.Edge {
-	return []ent.Edge{
-		edge.To("notes", Note.Type),
-		edge.To("likes", Like.Type),
 	}
 }

@@ -316,18 +316,25 @@ func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, nodeTab
 			// allColumns := r.autocompleteWithAllColumns(edge.Rel)
 			levelUp := strcase.ToLowerCamel(strings.TrimSuffix(edge.Rel.Column(), "_id"))
 			// strcase.ToCamel(levelUp)
-			permission["columns"] = edge.Rel.Columns
-			permission["check"] = map[string]interface{}{
-				levelUp: permission["check"],
+			// logrus.Error(levelUp)
+			newPermission := make(map[string]interface{})
+
+			for k, v := range permission {
+				newPermission[k] = v
 			}
-			permission["filter"] = map[string]interface{}{
-				levelUp: permission["filter"],
+
+			newPermission["columns"] = edge.Rel.Columns
+			newPermission["check"] = map[string]interface{}{
+				levelUp: newPermission["check"],
+			}
+			newPermission["filter"] = map[string]interface{}{
+				levelUp: newPermission["filter"],
 			}
 
 			// r.operatedTables[operationName][tableName] = time.Now()
 
 			logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
-			if err := r.pgCreateXPermission(op, permission, tableName, role, sourceName); err != nil {
+			if err := r.pgCreateXPermission(op, newPermission, tableName, role, sourceName); err != nil {
 				logrus.Warn(errors.WithStack(err))
 				continue
 			}

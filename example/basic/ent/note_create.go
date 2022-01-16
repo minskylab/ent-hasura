@@ -129,9 +129,6 @@ func (nc *NoteCreate) check() error {
 	if _, ok := nc.mutation.Content(); !ok {
 		return &ValidationError{Name: "content", err: errors.New(`ent: missing required field "content"`)}
 	}
-	if len(nc.mutation.AuthorsIDs()) == 0 {
-		return &ValidationError{Name: "authors", err: errors.New("ent: missing required edge \"authors\"")}
-	}
 	return nil
 }
 
