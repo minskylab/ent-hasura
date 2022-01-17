@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/minskylab/ent-hasura/example/basic/ent/like"
 	"github.com/minskylab/ent-hasura/example/basic/ent/note"
 	"github.com/minskylab/ent-hasura/example/basic/ent/predicate"
 	"github.com/minskylab/ent-hasura/example/basic/ent/user"
@@ -54,6 +55,21 @@ func (uu *UserUpdate) AddNotes(n ...*Note) *UserUpdate {
 	return uu.AddNoteIDs(ids...)
 }
 
+// AddLikeIDs adds the "likes" edge to the Like entity by IDs.
+func (uu *UserUpdate) AddLikeIDs(ids ...int) *UserUpdate {
+	uu.mutation.AddLikeIDs(ids...)
+	return uu
+}
+
+// AddLikes adds the "likes" edges to the Like entity.
+func (uu *UserUpdate) AddLikes(l ...*Like) *UserUpdate {
+	ids := make([]int, len(l))
+	for i := range l {
+		ids[i] = l[i].ID
+	}
+	return uu.AddLikeIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -78,6 +94,27 @@ func (uu *UserUpdate) RemoveNotes(n ...*Note) *UserUpdate {
 		ids[i] = n[i].ID
 	}
 	return uu.RemoveNoteIDs(ids...)
+}
+
+// ClearLikes clears all "likes" edges to the Like entity.
+func (uu *UserUpdate) ClearLikes() *UserUpdate {
+	uu.mutation.ClearLikes()
+	return uu
+}
+
+// RemoveLikeIDs removes the "likes" edge to Like entities by IDs.
+func (uu *UserUpdate) RemoveLikeIDs(ids ...int) *UserUpdate {
+	uu.mutation.RemoveLikeIDs(ids...)
+	return uu
+}
+
+// RemoveLikes removes "likes" edges to Like entities.
+func (uu *UserUpdate) RemoveLikes(l ...*Like) *UserUpdate {
+	ids := make([]int, len(l))
+	for i := range l {
+		ids[i] = l[i].ID
+	}
+	return uu.RemoveLikeIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -220,6 +257,60 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if uu.mutation.LikesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.LikesTable,
+			Columns: []string{user.LikesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: like.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedLikesIDs(); len(nodes) > 0 && !uu.mutation.LikesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.LikesTable,
+			Columns: []string{user.LikesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: like.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.LikesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.LikesTable,
+			Columns: []string{user.LikesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: like.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -266,6 +357,21 @@ func (uuo *UserUpdateOne) AddNotes(n ...*Note) *UserUpdateOne {
 	return uuo.AddNoteIDs(ids...)
 }
 
+// AddLikeIDs adds the "likes" edge to the Like entity by IDs.
+func (uuo *UserUpdateOne) AddLikeIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.AddLikeIDs(ids...)
+	return uuo
+}
+
+// AddLikes adds the "likes" edges to the Like entity.
+func (uuo *UserUpdateOne) AddLikes(l ...*Like) *UserUpdateOne {
+	ids := make([]int, len(l))
+	for i := range l {
+		ids[i] = l[i].ID
+	}
+	return uuo.AddLikeIDs(ids...)
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
@@ -290,6 +396,27 @@ func (uuo *UserUpdateOne) RemoveNotes(n ...*Note) *UserUpdateOne {
 		ids[i] = n[i].ID
 	}
 	return uuo.RemoveNoteIDs(ids...)
+}
+
+// ClearLikes clears all "likes" edges to the Like entity.
+func (uuo *UserUpdateOne) ClearLikes() *UserUpdateOne {
+	uuo.mutation.ClearLikes()
+	return uuo
+}
+
+// RemoveLikeIDs removes the "likes" edge to Like entities by IDs.
+func (uuo *UserUpdateOne) RemoveLikeIDs(ids ...int) *UserUpdateOne {
+	uuo.mutation.RemoveLikeIDs(ids...)
+	return uuo
+}
+
+// RemoveLikes removes "likes" edges to Like entities.
+func (uuo *UserUpdateOne) RemoveLikes(l ...*Like) *UserUpdateOne {
+	ids := make([]int, len(l))
+	for i := range l {
+		ids[i] = l[i].ID
+	}
+	return uuo.RemoveLikeIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -448,6 +575,60 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeInt,
 					Column: note.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.LikesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.LikesTable,
+			Columns: []string{user.LikesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: like.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedLikesIDs(); len(nodes) > 0 && !uuo.mutation.LikesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.LikesTable,
+			Columns: []string{user.LikesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: like.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.LikesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.LikesTable,
+			Columns: []string{user.LikesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: like.FieldID,
 				},
 			},
 		}

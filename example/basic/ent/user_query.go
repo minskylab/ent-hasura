@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/minskylab/ent-hasura/example/basic/ent/like"
 	"github.com/minskylab/ent-hasura/example/basic/ent/note"
 	"github.com/minskylab/ent-hasura/example/basic/ent/predicate"
 	"github.com/minskylab/ent-hasura/example/basic/ent/user"
@@ -28,6 +29,7 @@ type UserQuery struct {
 	predicates []predicate.User
 	// eager-loading edges.
 	withNotes *NoteQuery
+	withLikes *LikeQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -79,6 +81,28 @@ func (uq *UserQuery) QueryNotes() *NoteQuery {
 			sqlgraph.From(user.Table, user.FieldID, selector),
 			sqlgraph.To(note.Table, note.FieldID),
 			sqlgraph.Edge(sqlgraph.M2M, false, user.NotesTable, user.NotesPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryLikes chains the current query on the "likes" edge.
+func (uq *UserQuery) QueryLikes() *LikeQuery {
+	query := &LikeQuery{config: uq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := uq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := uq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, selector),
+			sqlgraph.To(like.Table, like.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.LikesTable, user.LikesColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(uq.driver.Dialect(), step)
 		return fromU, nil
@@ -268,6 +292,7 @@ func (uq *UserQuery) Clone() *UserQuery {
 		order:      append([]OrderFunc{}, uq.order...),
 		predicates: append([]predicate.User{}, uq.predicates...),
 		withNotes:  uq.withNotes.Clone(),
+		withLikes:  uq.withLikes.Clone(),
 		// clone intermediate query.
 		sql:  uq.sql.Clone(),
 		path: uq.path,
@@ -282,6 +307,17 @@ func (uq *UserQuery) WithNotes(opts ...func(*NoteQuery)) *UserQuery {
 		opt(query)
 	}
 	uq.withNotes = query
+	return uq
+}
+
+// WithLikes tells the query-builder to eager-load the nodes that are connected to
+// the "likes" edge. The optional arguments are used to configure the query builder of the edge.
+func (uq *UserQuery) WithLikes(opts ...func(*LikeQuery)) *UserQuery {
+	query := &LikeQuery{config: uq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	uq.withLikes = query
 	return uq
 }
 
@@ -350,8 +386,9 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 	var (
 		nodes       = []*User{}
 		_spec       = uq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			uq.withNotes != nil,
+			uq.withLikes != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
@@ -436,6 +473,35 @@ func (uq *UserQuery) sqlAll(ctx context.Context) ([]*User, error) {
 			for i := range nodes {
 				nodes[i].Edges.Notes = append(nodes[i].Edges.Notes, n)
 			}
+		}
+	}
+
+	if query := uq.withLikes; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[int]*User)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.Likes = []*Like{}
+		}
+		query.withFKs = true
+		query.Where(predicate.Like(func(s *sql.Selector) {
+			s.Where(sql.InValues(user.LikesColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.user_likes
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "user_likes" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "user_likes" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.Likes = append(node.Edges.Likes, n)
 		}
 	}
 

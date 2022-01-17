@@ -13,24 +13,6 @@ type User struct {
 	ent.Schema
 }
 
-func (u User) Annotations() []schema.Annotation {
-	return []schema.Annotation{
-		hasura.PermissionsRoleAnnotation{
-			Role: "user",
-			SelectPermission: &hasura.PermissionSelect{
-				Filter:            hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
-				Columns:           hasura.AllFields(u),
-				AllowAggregations: true,
-			},
-			UpdatePermission: &hasura.PermissionUpdate{
-				Check:   hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
-				Filter:  hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
-				Columns: hasura.AllFields(u),
-			},
-		},
-	}
-}
-
 // Fields of the User.
 func (User) Fields() []ent.Field {
 	return []ent.Field{
@@ -44,5 +26,24 @@ func (User) Fields() []ent.Field {
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("notes", Note.Type),
+		edge.To("likes", Like.Type),
+	}
+}
+
+func (u User) Annotations() []schema.Annotation {
+	return []schema.Annotation{
+		hasura.PermissionsRoleAnnotation{
+			Role: "user",
+			SelectPermission: &hasura.PermissionSelect{
+				Filter:            hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
+				AllColumns:        true,
+				AllowAggregations: true,
+			},
+			UpdatePermission: &hasura.PermissionUpdate{
+				Check:      hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
+				Filter:     hasura.M{"id": hasura.Eq("X-Hasura-User-Id")},
+				AllColumns: true,
+			},
+		},
 	}
 }

@@ -13,6 +13,8 @@ const (
 	FieldName = "name"
 	// EdgeNotes holds the string denoting the notes edge name in mutations.
 	EdgeNotes = "notes"
+	// EdgeLikes holds the string denoting the likes edge name in mutations.
+	EdgeLikes = "likes"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// NotesTable is the table that holds the notes relation/edge. The primary key declared below.
@@ -20,6 +22,13 @@ const (
 	// NotesInverseTable is the table name for the Note entity.
 	// It exists in this package in order to avoid circular dependency with the "note" package.
 	NotesInverseTable = "notes"
+	// LikesTable is the table that holds the likes relation/edge.
+	LikesTable = "likes"
+	// LikesInverseTable is the table name for the Like entity.
+	// It exists in this package in order to avoid circular dependency with the "like" package.
+	LikesInverseTable = "likes"
+	// LikesColumn is the table column denoting the likes relation/edge.
+	LikesColumn = "user_likes"
 )
 
 // Columns holds all SQL columns for user fields.

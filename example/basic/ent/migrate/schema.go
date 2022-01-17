@@ -8,6 +8,26 @@ import (
 )
 
 var (
+	// LikesColumns holds the columns for the "likes" table.
+	LikesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "user_likes", Type: field.TypeInt, Nullable: true},
+	}
+	// LikesTable holds the schema information for the "likes" table.
+	LikesTable = &schema.Table{
+		Name:       "likes",
+		Columns:    LikesColumns,
+		PrimaryKey: []*schema.Column{LikesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "likes_users_likes",
+				Columns:    []*schema.Column{LikesColumns[2]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// NotesColumns holds the columns for the "notes" table.
 	NotesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -59,6 +79,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		LikesTable,
 		NotesTable,
 		UsersTable,
 		UserNotesTable,
@@ -66,6 +87,7 @@ var (
 )
 
 func init() {
+	LikesTable.ForeignKeys[0].RefTable = UsersTable
 	UserNotesTable.ForeignKeys[0].RefTable = UsersTable
 	UserNotesTable.ForeignKeys[1].RefTable = NotesTable
 }
