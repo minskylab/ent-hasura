@@ -38,6 +38,7 @@ func main() {
 					stringFlag("source", "c", "default"),
 					stringFlag("envfile", "e", ".env"),
 					stringFlag("configfile", "f", ""),
+					boolFlag("debug", "d", false),
 				},
 				Action: applyCommand,
 			},
@@ -97,7 +98,14 @@ func generateCommand(c *cli.Context) error {
 
 func applyCommand(c *cli.Context) error {
 	envFile := c.String("envfile")
-	logrus.Info(envFile)
+	debug := c.Bool("debug")
+
+	if debug {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+
+	logrus.Debugf("loadenv: %s\n", envFile)
+
 	run, err := hasura.NewEphemeralRuntime(
 		hasura.WithEnvFilepath(envFile),
 	)

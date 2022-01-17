@@ -60,7 +60,7 @@ func (r *EphemeralRuntime) genericHasuraMetadataQuery(body ActionBody) error {
 		return nil
 	}
 
-	logrus.Info("response: ", res.StatusCode(), " ", res.String())
+	logrus.Debug("response: ", res.StatusCode(), " ", res.String())
 
 	return nil
 }

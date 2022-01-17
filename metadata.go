@@ -43,11 +43,12 @@ type ID struct {
 }
 
 type PermissionInsert struct {
-	Check       map[string]interface{} `json:"check"`
-	Set         map[string]interface{} `json:"set,omitempty"`
-	Columns     []string               `json:"columns,omitempty"`
-	AllColumns  bool                   `json:"all_columns,omitempty"`
-	BackendOnly bool                   `json:"backend_only,omitempty"`
+	Check           map[string]interface{} `json:"check"`
+	Set             map[string]interface{} `json:"set,omitempty"`
+	Columns         []string               `json:"columns,omitempty"`
+	AllColumns      bool                   `json:"all_columns,omitempty"`
+	ExcludedColumns []string               `json:"excluded_columns,omitempty"`
+	BackendOnly     bool                   `json:"backend_only,omitempty"`
 }
 
 type InsertPermission struct {
@@ -58,6 +59,7 @@ type InsertPermission struct {
 type PermissionSelect struct {
 	Columns           []string               `json:"columns,omitempty"`
 	AllColumns        bool                   `json:"all_columns,omitempty"`
+	ExcludedColumns   []string               `json:"excluded_columns,omitempty"`
 	Filter            map[string]interface{} `json:"filter,omitempty"`
 	AllowAggregations bool                   `json:"allow_aggregations,omitempty"`
 }
@@ -68,10 +70,11 @@ type SelectPermission struct {
 }
 
 type PermissionUpdate struct {
-	Columns    []string               `json:"columns,omitempty"`
-	AllColumns bool                   `json:"all_columns,omitempty"`
-	Filter     map[string]interface{} `json:"filter,omitempty"`
-	Check      map[string]interface{} `json:"check,omitempty"`
+	Columns         []string               `json:"columns,omitempty"`
+	AllColumns      bool                   `json:"all_columns,omitempty"`
+	ExcludedColumns []string               `json:"excluded_columns,omitempty"`
+	Filter          map[string]interface{} `json:"filter,omitempty"`
+	Check           map[string]interface{} `json:"check,omitempty"`
 }
 
 type UpdatePermission struct {
@@ -89,9 +92,10 @@ type DeletePermission struct {
 }
 
 type ForeignKeyConstraintOn struct {
-	Column     string `json:"column,omitempty"`
-	AllColumns bool   `json:"all_columns,omitempty"`
-	Table      Table  `json:"table,omitempty"`
+	Column          string   `json:"column,omitempty"`
+	AllColumns      bool     `json:"all_columns,omitempty"`
+	ExcludedColumns []string `json:"excluded_columns,omitempty"`
+	Table           Table    `json:"table,omitempty"`
 }
 
 type UsingArray struct {

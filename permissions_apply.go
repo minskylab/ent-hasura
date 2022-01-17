@@ -47,11 +47,32 @@ func (r *EphemeralRuntime) pgCreateXPermission(
 	tableName,
 	role,
 	source string,
-	allColumns ...string,
+	completeColumns ...string,
 ) error {
-	if allColumnsFlag, isOk := perm["all_columns"].(bool); isOk && allColumnsFlag && len(allColumns) > 0 {
-		perm["columns"] = allColumns
+	if operation == pgCreateDeletePermission {
+		return r.pgCreateDeletePermission(perm, tableName, role, source)
 	}
+
+	selectedColumns := []string{}
+
+	if allColumnsFlag, isOk := perm["all_columns"].(bool); isOk && allColumnsFlag && len(completeColumns) > 0 {
+		selectedColumns = completeColumns
+	}
+
+	excludedColumns, _ := perm["excluded_columns"].([]interface{})
+	if len(excludedColumns) > 0 {
+		// TODO: improve this shit
+		for i, column := range selectedColumns {
+			for _, excludedColumn := range excludedColumns {
+				if column == excludedColumn.(string) {
+					selectedColumns = append(selectedColumns[:i], selectedColumns[i+1:]...)
+					break
+				}
+			}
+		}
+	}
+
+	perm["columns"] = selectedColumns
 
 	switch operation {
 	case pgCreateInsertPermission:

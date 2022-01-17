@@ -6,7 +6,6 @@ import (
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
 	hasura "github.com/minskylab/ent-hasura"
-	"github.com/sirupsen/logrus"
 )
 
 // Note holds the schema definition for the Note entity.
@@ -31,9 +30,6 @@ func (Note) Edges() []ent.Edge {
 }
 
 func (n Note) Annotations() []schema.Annotation {
-	logrus.Info("edges")
-	logrus.Info(n.Edges()[0].Descriptor().Field)
-
 	return []schema.Annotation{
 		hasura.PermissionsRoleAnnotation{
 			Role: "user",
@@ -43,9 +39,10 @@ func (n Note) Annotations() []schema.Annotation {
 				AllowAggregations: true,
 			},
 			UpdatePermission: &hasura.PermissionUpdate{
-				Check:      hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
-				Filter:     hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
-				AllColumns: true,
+				Check:           hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
+				Filter:          hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
+				AllColumns:      true,
+				ExcludedColumns: []string{"content"},
 			},
 		},
 	}
