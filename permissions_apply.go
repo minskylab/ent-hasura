@@ -55,6 +55,10 @@ func (r *EphemeralRuntime) pgCreateXPermission(
 
 	selectedColumns := []string{}
 
+	if cols, ok := perm["columns"].([]string); ok {
+		selectedColumns = append(selectedColumns, cols...)
+	}
+
 	if allColumnsFlag, isOk := perm["all_columns"].(bool); isOk && allColumnsFlag && len(completeColumns) > 0 {
 		selectedColumns = completeColumns
 	}

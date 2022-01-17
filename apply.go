@@ -214,7 +214,7 @@ func (r *EphemeralRuntime) pgCreateAllXPermissionforNode(op HasuraOperation, nod
 	return r.createXPermissionForEdges(op, nodeTables, node, perm, role, sourceName)
 }
 
-func isNodeTable(nodeTables []string, tableName string) bool {
+func (r *EphemeralRuntime) isNodeTable(nodeTables []string, tableName string) bool {
 	for _, nodeTable := range nodeTables {
 		if nodeTable == tableName {
 			return true
@@ -229,7 +229,7 @@ func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, nodeTab
 		if !edge.IsInverse() && !edge.OwnFK() {
 			tableName := edge.Rel.Table
 
-			if isNodeTable(nodeTables, tableName) {
+			if r.isNodeTable(nodeTables, tableName) {
 				continue
 			}
 
