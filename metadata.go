@@ -60,7 +60,7 @@ type PermissionSelect struct {
 	Columns           []string               `json:"columns,omitempty"`
 	AllColumns        bool                   `json:"all_columns,omitempty"`
 	ExcludedColumns   []string               `json:"excluded_columns,omitempty"`
-	Filter            map[string]interface{} `json:"filter,omitempty"`
+	Filter            map[string]interface{} `json:"filter"`
 	AllowAggregations bool                   `json:"allow_aggregations,omitempty"`
 }
 
@@ -70,11 +70,11 @@ type SelectPermission struct {
 }
 
 type PermissionUpdate struct {
+	Filter          map[string]interface{} `json:"filter"`
+	Check           map[string]interface{} `json:"check"`
 	Columns         []string               `json:"columns,omitempty"`
 	AllColumns      bool                   `json:"all_columns,omitempty"`
 	ExcludedColumns []string               `json:"excluded_columns,omitempty"`
-	Filter          map[string]interface{} `json:"filter,omitempty"`
-	Check           map[string]interface{} `json:"check,omitempty"`
 }
 
 type UpdatePermission struct {
@@ -83,7 +83,7 @@ type UpdatePermission struct {
 }
 
 type PermissionDelete struct {
-	Filter map[string]interface{} `json:"filter,omitempty"`
+	Filter map[string]interface{} `json:"filter"`
 }
 
 type DeletePermission struct {

@@ -241,11 +241,18 @@ func (r *EphemeralRuntime) createXPermissionForEdges(op HasuraOperation, nodeTab
 			}
 
 			newPermission["columns"] = edge.Rel.Columns
-			newPermission["check"] = map[string]interface{}{
-				levelUp: newPermission["check"],
+
+			if newPermission["check"] != nil || levelUp == "" {
+				// newPermission["check"].(map[string]interface{})
+				newPermission["check"] = map[string]interface{}{
+					levelUp: newPermission["check"],
+				}
 			}
-			newPermission["filter"] = map[string]interface{}{
-				levelUp: newPermission["filter"],
+
+			if newPermission["filter"] != nil || levelUp == "" {
+				newPermission["filter"] = map[string]interface{}{
+					levelUp: newPermission["filter"],
+				}
 			}
 
 			logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
