@@ -1,141 +1,134 @@
 package hasura
 
 import (
-	"fmt"
+	"github.com/minskylab/hasura-api/metadata"
 )
 
-type HasuraOperation string
+// func (r *Runtime) pgCreatePermission(
+// 	operation HasuraOperation,
+// 	perm map[string]interface{},
+// 	tableName,
+// 	role,
+// 	sourceName,
+// 	schemaName string,
+// 	completeColumns ...string,
+// ) (metadata.MetadataQuery, error) {
+// 	if operation == pgCreateDeletePermission {
+// 		return r.pgCreateDeletePermission(perm, tableName, role, sourceName, schemaName), nil
+// 	}
 
-const (
-	pgCreateInsertPermission HasuraOperation = "pg_create_insert_permission"
-	pgCreateSelectPermission HasuraOperation = "pg_create_select_permission"
-	pgCreateUpdatePermission HasuraOperation = "pg_create_update_permission"
-	pgCreateDeletePermission HasuraOperation = "pg_create_delete_permission"
-)
+// 	selectedColumns := []string{}
 
-type PGCreateInsertPermissionArgs struct {
-	Table      string                 `json:"table"`
-	Source     string                 `json:"source"`
-	Role       string                 `json:"role"`
-	Permission map[string]interface{} `json:"permission"`
-}
+// 	if cols, ok := perm["columns"].([]string); ok {
+// 		selectedColumns = append(selectedColumns, cols...)
+// 	}
 
-type PGCreateSelectPermissionArgs struct {
-	Table      string                 `json:"table"`
-	Source     string                 `json:"source"`
-	Role       string                 `json:"role"`
-	Permission map[string]interface{} `json:"permission"`
-}
+// 	if allColumnsFlag, isOk := perm["all_columns"].(bool); isOk && allColumnsFlag && len(completeColumns) > 0 {
+// 		selectedColumns = completeColumns
+// 	}
 
-type PGCreateUpdatePermissionArgs struct {
-	Table      string                 `json:"table"`
-	Source     string                 `json:"source"`
-	Role       string                 `json:"role"`
-	Permission map[string]interface{} `json:"permission"`
-}
+// 	excludedColumns, _ := perm["excluded_columns"].([]interface{})
+// 	if len(excludedColumns) > 0 {
+// 		// TODO: improve this shit
+// 		for i, column := range selectedColumns {
+// 			for _, excludedColumn := range excludedColumns {
+// 				if column == excludedColumn.(string) {
+// 					selectedColumns = append(selectedColumns[:i], selectedColumns[i+1:]...)
+// 					break
+// 				}
+// 			}
+// 		}
+// 	}
 
-type PGCreateDeletePermissionArgs struct {
-	Table      string                 `json:"table"`
-	Source     string                 `json:"source"`
-	Role       string                 `json:"role"`
-	Permission map[string]interface{} `json:"permission"`
-}
+// 	perm["columns"] = selectedColumns
 
-func (r *EphemeralRuntime) pgCreateXPermission(
-	operation HasuraOperation,
-	perm map[string]interface{},
-	tableName,
-	role,
-	source string,
-	completeColumns ...string,
-) error {
-	if operation == pgCreateDeletePermission {
-		return r.pgCreateDeletePermission(perm, tableName, role, source)
-	}
+// 	switch operation {
+// 	case pgCreateInsertPermission:
+// 		return r.pgCreateInsertPermission(perm, tableName, role, sourceName, schemaName), nil
+// 	case pgCreateSelectPermission:
+// 		return r.pgCreateSelectPermission(perm, tableName, role, sourceName, schemaName), nil
+// 	case pgCreateUpdatePermission:
+// 		return r.pgCreateUpdatePermission(perm, tableName, role, sourceName, schemaName), nil
+// 	case pgCreateDeletePermission:
+// 		return r.pgCreateDeletePermission(perm, tableName, role, sourceName, schemaName), nil
+// 	}
 
-	selectedColumns := []string{}
+// 	return metadata.MetadataQuery{}, fmt.Errorf("unsupported operation: %s", operation)
+// }
 
-	if cols, ok := perm["columns"].([]string); ok {
-		selectedColumns = append(selectedColumns, cols...)
-	}
+func (r *Runtime) pgCreateInsertPermission(perm map[string]interface{}, tableName, roleName, sourceName, schemaName string) metadata.MetadataQuery {
+	// selectedColumns := []string{}
 
-	if allColumnsFlag, isOk := perm["all_columns"].(bool); isOk && allColumnsFlag && len(completeColumns) > 0 {
-		selectedColumns = completeColumns
-	}
+	// if cols, ok := perm["columns"].([]string); ok {
+	// 	selectedColumns = append(selectedColumns, cols...)
+	// }
 
-	excludedColumns, _ := perm["excluded_columns"].([]interface{})
-	if len(excludedColumns) > 0 {
-		// TODO: improve this shit
-		for i, column := range selectedColumns {
-			for _, excludedColumn := range excludedColumns {
-				if column == excludedColumn.(string) {
-					selectedColumns = append(selectedColumns[:i], selectedColumns[i+1:]...)
-					break
-				}
-			}
-		}
-	}
+	// if allColumns, ok := perm["columns"].(string); ok {
+	// 	selectedColumns = append(selectedColumns, allColumns)
+	// }
 
-	perm["columns"] = selectedColumns
+	// if allColumnsFlag, isOk := perm["all_columns"].(bool); isOk && allColumnsFlag && len(completeColumns) > 0 {
+	// 	selectedColumns = completeColumns
+	// }
 
-	switch operation {
-	case pgCreateInsertPermission:
-		return r.pgCreateInsertPermission(perm, tableName, role, source)
-	case pgCreateSelectPermission:
-		return r.pgCreateSelectPermission(perm, tableName, role, source)
-	case pgCreateUpdatePermission:
-		return r.pgCreateUpdatePermission(perm, tableName, role, source)
-	case pgCreateDeletePermission:
-		return r.pgCreateDeletePermission(perm, tableName, role, source)
-	default:
-		return fmt.Errorf("unsupported operation: %s", operation)
-	}
-}
+	// excludedColumns, _ := perm["excluded_columns"].([]interface{})
+	// if len(excludedColumns) > 0 {
+	// 	// TODO: improve this shit
+	// 	for i, column := range selectedColumns {
+	// 		for _, excludedColumn := range excludedColumns {
+	// 			if column == excludedColumn.(string) {
+	// 				selectedColumns = append(selectedColumns[:i], selectedColumns[i+1:]...)
+	// 				break
+	// 			}
+	// 		}
+	// 	}
+	// }
 
-func (r *EphemeralRuntime) pgCreateInsertPermission(perm map[string]interface{}, tableName, role, source string) error {
-	return r.genericHasuraMetadataQuery(ActionBody{
-		Type: string(pgCreateInsertPermission),
-		Args: PGCreateInsertPermissionArgs{
-			Table:      tableName,
-			Source:     source,
-			Role:       role,
-			Permission: perm,
+	// perm["columns"] = selectedColumns
+
+	return metadata.PgCreateInsertPermissionQuery(&metadata.PgCreateInsertPermissionArgs{
+		Permission: metadata.GenericPermission(perm),
+		Table: metadata.QualifiedTableName{
+			Name:   tableName,
+			Schema: schemaName,
 		},
+		Role:   roleName,
+		Source: sourceName,
 	})
 }
 
-func (r *EphemeralRuntime) pgCreateSelectPermission(perm map[string]interface{}, tableName, role, source string) error {
-	return r.genericHasuraMetadataQuery(ActionBody{
-		Type: string(pgCreateSelectPermission),
-		Args: PGCreateSelectPermissionArgs{
-			Table:      tableName,
-			Source:     source,
-			Role:       role,
-			Permission: perm,
+func (r *Runtime) pgCreateSelectPermission(perm map[string]interface{}, tableName, role, sourceName, schemaName string) metadata.MetadataQuery {
+	return metadata.PgCreateSelectPermissionQuery(&metadata.PgCreateSelectPermissionArgs{
+		Permission: metadata.GenericPermission(perm),
+		Table: metadata.QualifiedTableName{
+			Name:   tableName,
+			Schema: schemaName,
 		},
+		Role:   role,
+		Source: sourceName,
 	})
 }
 
-func (r *EphemeralRuntime) pgCreateUpdatePermission(perm map[string]interface{}, tableName, role, source string) error {
-	return r.genericHasuraMetadataQuery(ActionBody{
-		Type: string(pgCreateUpdatePermission),
-		Args: PGCreateUpdatePermissionArgs{
-			Table:      tableName,
-			Source:     source,
-			Role:       role,
-			Permission: perm,
+func (r *Runtime) pgCreateUpdatePermission(perm map[string]interface{}, tableName, role, sourceName, schemaName string) metadata.MetadataQuery {
+	return metadata.PgCreateUpdatePermissionQuery(&metadata.PgCreateUpdatePermissionArgs{
+		Permission: metadata.GenericPermission(perm),
+		Table: metadata.QualifiedTableName{
+			Name:   tableName,
+			Schema: schemaName,
 		},
+		Role:   role,
+		Source: sourceName,
 	})
 }
 
-func (r *EphemeralRuntime) pgCreateDeletePermission(perm map[string]interface{}, tableName, role, source string) error {
-	return r.genericHasuraMetadataQuery(ActionBody{
-		Type: string(pgCreateDeletePermission),
-		Args: PGCreateDeletePermissionArgs{
-			Table:      tableName,
-			Source:     source,
-			Role:       role,
-			Permission: perm,
+func (r *Runtime) pgCreateDeletePermission(perm map[string]interface{}, tableName, role, sourceName, schemaName string) metadata.MetadataQuery {
+	return metadata.PgCreateUpdatePermissionQuery(&metadata.PgCreateUpdatePermissionArgs{
+		Permission: metadata.GenericPermission(perm),
+		Table: metadata.QualifiedTableName{
+			Name:   tableName,
+			Schema: schemaName,
 		},
+		Role:   role,
+		Source: sourceName,
 	})
 }

@@ -1,66 +1,37 @@
 package hasura
 
-import (
-	"fmt"
+// type HasuraMetadataConfig struct {
+// 	SchemaPath string
+// 	SchemaName string
+// 	Source     string
 
-	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-)
+// 	OutputMetadataFile string
 
-type HasuraMetadataConfig struct {
-	SchemaPath string
-	SchemaName string
-	Source     string
+// 	MetadataInput  string
+// 	OverrideTables bool
+// 	DefaultRole    string
+// }
 
-	OutputMetadataFile string
+// var DefaultHasuraMetadataConfig HasuraMetadataConfig = HasuraMetadataConfig{
+// 	SchemaPath: "./ent/schema",
+// 	SchemaName: "public",
+// 	Source:     "default",
 
-	MetadataInput  string
-	OverrideTables bool
-	DefaultRole    string
-}
+// 	OutputMetadataFile: "hasura/metadata.json",
 
-var DefaultHasuraMetadataConfig HasuraMetadataConfig = HasuraMetadataConfig{
-	SchemaPath: "./ent/schema",
-	SchemaName: "public",
-	Source:     "default",
+// 	MetadataInput:  "",
+// 	OverrideTables: false,
+// 	DefaultRole:    "",
+// }
 
-	OutputMetadataFile: "hasura/metadata.json",
-
-	MetadataInput:  "",
-	OverrideTables: false,
-	DefaultRole:    "",
-}
-
-func CreateDefaultMetadataFromSchema(config *HasuraMetadataConfig) error {
-	return GenerateHasuraConfigurationAndRelationships(
-		config.SchemaPath,
-		config.OutputMetadataFile,
-		config.MetadataInput,
-		config.Source,
-		config.SchemaName,
-		config.OverrideTables,
-		config.DefaultRole,
-	)
-}
-
-func (r *EphemeralRuntime) genericHasuraMetadataQuery(body ActionBody) error {
-	endpoint := fmt.Sprintf("%s/v1/metadata", r.Config.Endpoint)
-
-	res, err := r.Client.R().
-		SetHeaders(map[string]string{
-			"Content-Type":          "application/json",
-			"X-Hasura-Role":         "admin",
-			"X-Hasura-Admin-Secret": r.AdminSecret,
-		}).
-		SetBody(body).
-		Post(endpoint)
-	if err != nil {
-		logrus.Warn(errors.WithStack(err))
-		logrus.Warn("response: ", res.StatusCode(), " ", res.String())
-		return nil
-	}
-
-	logrus.Debug("response: ", res.StatusCode(), " ", res.String())
-
-	return nil
-}
+// func CreateDefaultMetadataFromSchema(config *HasuraMetadataConfig) error {
+// 	return GenerateHasuraConfigurationAndRelationships(
+// 		config.SchemaPath,
+// 		config.OutputMetadataFile,
+// 		config.MetadataInput,
+// 		config.Source,
+// 		config.SchemaName,
+// 		config.OverrideTables,
+// 		config.DefaultRole,
+// 	)
+// }
