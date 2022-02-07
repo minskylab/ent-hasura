@@ -131,6 +131,15 @@ func (r *Runtime) CustomizeAllTables(graph *gen.Graph, sourceName, schemaName st
 		}))
 
 		for _, rel := range def.ObjectRelationships {
+			var using metadata.IObjRelUsingChoice
+
+			switch u := rel.Using.ForeignKeyConstraintOn.(type) {
+			case string:
+				using = metadata.SameTable(u)
+			case metadata.RemoteTable:
+				using = u
+			}
+
 			objectRelationBulk = append(objectRelationBulk, metadata.PgCreateObjectRelationshipQuery(&metadata.PgCreateObjectRelationshipArgs{
 				Table: metadata.QualifiedTableName{
 					Name:   tableName,
@@ -139,7 +148,7 @@ func (r *Runtime) CustomizeAllTables(graph *gen.Graph, sourceName, schemaName st
 				Name:   rel.Name,
 				Source: sourceName,
 				Using: metadata.ObjRelUsing{
-					ForeignKeyConstraintOn: metadata.SameTable(rel.Using.ForeignKeyConstraintOn.(string)),
+					ForeignKeyConstraintOn: using,
 				},
 			}))
 		}

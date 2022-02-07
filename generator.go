@@ -91,7 +91,7 @@ func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, sc
 			}
 
 			if !edge.OwnFK() {
-				foreignKey = metadata.ForeignKeyConstraintOn{
+				foreignKey = metadata.RemoteTable{
 					Column: name,
 					Table: metadata.QualifiedTableName{
 						Schema: schemaName,
@@ -126,7 +126,7 @@ func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, sc
 			definition.ArrayRelationships = append(definition.ArrayRelationships, &metadata.ArrayRelationship{
 				Name: realName,
 				Using: metadata.UsingArray{
-					ForeignKeyConstraintOn: metadata.ForeignKeyConstraintOn{
+					ForeignKeyConstraintOn: metadata.RemoteTable{
 						Column: columnName,
 						Table: metadata.QualifiedTableName{
 							Schema: schemaName,
