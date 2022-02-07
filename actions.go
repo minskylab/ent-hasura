@@ -1,4 +1,4 @@
-package hasura
+package enthasura
 
 // type ActionBody struct {
 // 	Type string      `json:"type"`

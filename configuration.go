@@ -1,71 +1,67 @@
-package hasura
+package enthasura
 
-import (
-	"github.com/minskylab/hasura-api/metadata"
-)
+// func enhanceHasuraTable(source *metadata.Source, table *metadata.TableDefinition) {
+// 	for i, iTable := range source.Tables {
+// 		qName, _ := iTable.Table.(metadata.QualifiedTableName)
 
-func enhanceHasuraTable(source *metadata.Source, table *metadata.TableDefinition) {
-	for i, iTable := range source.Tables {
-		qName, _ := iTable.Table.(metadata.QualifiedTableName)
+// 		if qName.Schema != qName.Schema || qName.Name != qName.Name {
+// 			continue
+// 		}
 
-		if qName.Schema != qName.Schema || qName.Name != qName.Name {
-			continue
-		}
+// 		if source.Tables[i].Configuration == nil {
+// 			source.Tables[i].Configuration = &metadata.TableConfiguration{}
+// 		}
 
-		if source.Tables[i].Configuration == nil {
-			source.Tables[i].Configuration = &metadata.TableConfiguration{}
-		}
+// 		if source.Tables[i].Configuration.CustomName == "" {
+// 			source.Tables[i].Configuration.CustomName = table.Configuration.CustomName
+// 		}
 
-		if source.Tables[i].Configuration.CustomName == "" {
-			source.Tables[i].Configuration.CustomName = table.Configuration.CustomName
-		}
+// 		if source.Tables[i].Configuration.CustomRootFields == nil {
+// 			source.Tables[i].Configuration.CustomRootFields = &metadata.CustomRootFields{}
+// 		}
 
-		if source.Tables[i].Configuration.CustomRootFields == nil {
-			source.Tables[i].Configuration.CustomRootFields = &metadata.CustomRootFields{}
-		}
+// 		if source.Tables[i].Configuration.CustomRootFields.Insert == "" {
+// 			source.Tables[i].Configuration.CustomRootFields.Insert = table.Configuration.CustomRootFields.Insert
+// 		}
 
-		if source.Tables[i].Configuration.CustomRootFields.Insert == "" {
-			source.Tables[i].Configuration.CustomRootFields.Insert = table.Configuration.CustomRootFields.Insert
-		}
+// 		if source.Tables[i].Configuration.CustomRootFields.InsertOne == "" {
+// 			source.Tables[i].Configuration.CustomRootFields.InsertOne = table.Configuration.CustomRootFields.InsertOne
+// 		}
 
-		if source.Tables[i].Configuration.CustomRootFields.InsertOne == "" {
-			source.Tables[i].Configuration.CustomRootFields.InsertOne = table.Configuration.CustomRootFields.InsertOne
-		}
+// 		if source.Tables[i].Configuration.CustomRootFields.Update == "" {
+// 			source.Tables[i].Configuration.CustomRootFields.Update = table.Configuration.CustomRootFields.Update
+// 		}
 
-		if source.Tables[i].Configuration.CustomRootFields.Update == "" {
-			source.Tables[i].Configuration.CustomRootFields.Update = table.Configuration.CustomRootFields.Update
-		}
+// 		if source.Tables[i].Configuration.CustomRootFields.UpdateByPk == "" {
+// 			source.Tables[i].Configuration.CustomRootFields.UpdateByPk = table.Configuration.CustomRootFields.UpdateByPk
+// 		}
 
-		if source.Tables[i].Configuration.CustomRootFields.UpdateByPk == "" {
-			source.Tables[i].Configuration.CustomRootFields.UpdateByPk = table.Configuration.CustomRootFields.UpdateByPk
-		}
+// 		if source.Tables[i].Configuration.CustomRootFields.Select == "" {
+// 			source.Tables[i].Configuration.CustomRootFields.Select = table.Configuration.CustomRootFields.Select
+// 		}
 
-		if source.Tables[i].Configuration.CustomRootFields.Select == "" {
-			source.Tables[i].Configuration.CustomRootFields.Select = table.Configuration.CustomRootFields.Select
-		}
+// 		if source.Tables[i].Configuration.CustomRootFields.Delete == "" {
+// 			source.Tables[i].Configuration.CustomRootFields.Delete = table.Configuration.CustomRootFields.Delete
+// 		}
 
-		if source.Tables[i].Configuration.CustomRootFields.Delete == "" {
-			source.Tables[i].Configuration.CustomRootFields.Delete = table.Configuration.CustomRootFields.Delete
-		}
+// 		if source.Tables[i].Configuration.CustomRootFields.DeleteByPk == "" {
+// 			source.Tables[i].Configuration.CustomRootFields.DeleteByPk = table.Configuration.CustomRootFields.DeleteByPk
+// 		}
 
-		if source.Tables[i].Configuration.CustomRootFields.DeleteByPk == "" {
-			source.Tables[i].Configuration.CustomRootFields.DeleteByPk = table.Configuration.CustomRootFields.DeleteByPk
-		}
+// 		if source.Tables[i].Configuration.CustomRootFields.SelectAggregate == "" {
+// 			source.Tables[i].Configuration.CustomRootFields.SelectAggregate = table.Configuration.CustomRootFields.SelectAggregate
+// 		}
 
-		if source.Tables[i].Configuration.CustomRootFields.SelectAggregate == "" {
-			source.Tables[i].Configuration.CustomRootFields.SelectAggregate = table.Configuration.CustomRootFields.SelectAggregate
-		}
+// 		if source.Tables[i].Configuration.CustomRootFields.SelectByPk == "" {
+// 			source.Tables[i].Configuration.CustomRootFields.SelectByPk = table.Configuration.CustomRootFields.SelectByPk
+// 		}
 
-		if source.Tables[i].Configuration.CustomRootFields.SelectByPk == "" {
-			source.Tables[i].Configuration.CustomRootFields.SelectByPk = table.Configuration.CustomRootFields.SelectByPk
-		}
+// 		source.Tables[i].Configuration.CustomColumnNames = table.Configuration.CustomColumnNames
 
-		source.Tables[i].Configuration.CustomColumnNames = table.Configuration.CustomColumnNames
-
-		source.Tables[i].ObjectRelationships = table.ObjectRelationships
-		source.Tables[i].ArrayRelationships = table.ArrayRelationships
-	}
-}
+// 		source.Tables[i].ObjectRelationships = table.ObjectRelationships
+// 		source.Tables[i].ArrayRelationships = table.ArrayRelationships
+// 	}
+// }
 
 // func enhancedHasuraConfigurationAndRelationships(initial *HasuraMetadata, schema *gen.Graph, sourceName, schemaName string, overrideTables bool) error {
 // 	initial.ResourceVersion += 1

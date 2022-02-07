@@ -23,15 +23,15 @@ func (l Like) Annotations() []schema.Annotation {
 	return []schema.Annotation{
 		hasura.PermissionsRoleAnnotation{
 			Role: "user",
-			SelectPermission: &hasura.PermissionSelect{
-				Filter:            hasura.M{"creator": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}},
-				AllColumns:        true,
-				AllowAggregations: true,
+			SelectPermission: &hasura.SelectPermission{
+				Columns:        hasura.AllColumns,
+				ComputedFields: []string{},
+				Filter:         hasura.M{"creator": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}},
 			},
-			UpdatePermission: &hasura.PermissionUpdate{
-				Check:      hasura.M{"creator": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}},
-				Filter:     hasura.M{"creator": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}},
-				AllColumns: true,
+			UpdatePermission: &hasura.UpdatePermission{
+				Check:   hasura.M{"creator": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}},
+				Filter:  hasura.M{"creator": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}},
+				Columns: hasura.AllColumns,
 			},
 		},
 	}

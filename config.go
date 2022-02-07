@@ -1,4 +1,4 @@
-package hasura
+package enthasura
 
 type Config struct {
 	InsertVerbName    string

@@ -1,4 +1,4 @@
-package hasura
+package enthasura
 
 import (
 	"strings"

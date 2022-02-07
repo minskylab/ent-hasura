@@ -1,4 +1,6 @@
-package hasura
+package enthasura
+
+import hasura_api "github.com/minskylab/hasura-api"
 
 // type HasuraMetadataConfig struct {
 // 	SchemaPath string
@@ -35,3 +37,9 @@ package hasura
 // 		config.DefaultRole,
 // 	)
 // }
+
+var (
+	WithConfigFilepath = hasura_api.WithConfigFilepath
+	WithEnvFilepath    = hasura_api.WithEnvFilepath
+	WithLiterals       = hasura_api.WithLiterals
+)

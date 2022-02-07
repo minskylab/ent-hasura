@@ -1,8 +1,9 @@
-package hasura
+package enthasura
 
 import (
 	"strings"
 
+	"entgo.io/ent/entc"
 	"entgo.io/ent/entc/gen"
 	"github.com/iancoleman/strcase"
 	"github.com/minskylab/hasura-api/metadata"
@@ -10,24 +11,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (r *Runtime) tableNameFromDefinition(table metadata.TableDefinition) (string, error) {
-	tableName := ""
-	switch tName := table.Table.(type) {
-	case metadata.TableName:
-		tableName = string(tName)
-	case metadata.QualifiedTableName:
-		tableName = string(tName.Name)
-	default:
-		return "", errors.Errorf("unexpected type for table name: %T", tName)
-	}
-
-	return tableName, nil
-}
-
-func (r *Runtime) clearMetadata() error {
-	_, err := r.hasura.Metadata.ClearMetadata(&metadata.ClearMetadataArgs{})
+func (r *Runtime) PerformFullMetadataTransform(entSchemaPath string, sourceName, schemaName string) error {
+	graph, err := entc.LoadGraph(entSchemaPath, &gen.Config{})
 	if err != nil {
 		return errors.WithStack(err)
+	}
+
+	if err := r.PerformPrelude(graph, sourceName, schemaName, false); err != nil {
+		return errors.WithMessage(err, "error at prelude")
+	}
+
+	if err := r.TrackAllTables(graph, sourceName, schemaName); err != nil {
+		return errors.WithMessage(err, "error at track all tables")
+	}
+
+	if err := r.CustomizeAllTables(graph, sourceName, schemaName); err != nil {
+		return errors.WithMessage(err, "error at customize all tables")
+	}
+
+	if err := r.PermissionsForAllTables(graph, sourceName, schemaName); err != nil {
+		return errors.WithMessage(err, "error at permissions for all tables")
 	}
 
 	return nil
@@ -64,7 +67,7 @@ func (r *Runtime) PerformPrelude(graph *gen.Graph, sourceName, schemaName string
 		return errors.WithStack(err)
 	}
 
-	return logAndResponseMetadataResponse(res)
+	return logAndResponseMetadataResponse(res, true)
 }
 
 func (r *Runtime) TrackAllTables(graph *gen.Graph, sourceName, schemaName string) error {
@@ -89,7 +92,7 @@ func (r *Runtime) TrackAllTables(graph *gen.Graph, sourceName, schemaName string
 		return errors.WithStack(err)
 	}
 
-	return logAndResponseMetadataResponse(res)
+	return logAndResponseMetadataResponse(res, true)
 }
 
 func (r *Runtime) CustomizeAllTables(graph *gen.Graph, sourceName, schemaName string) error {
@@ -126,7 +129,7 @@ func (r *Runtime) CustomizeAllTables(graph *gen.Graph, sourceName, schemaName st
 				Name:   rel.Name,
 				Source: sourceName,
 				Using: metadata.ObjRelUsing{
-					ForeignKeyConstraintOn: rel.Using.ForeignKeyConstraintOn.(metadata.IObjRelUsingChoice),
+					ForeignKeyConstraintOn: metadata.SameTable(rel.Using.ForeignKeyConstraintOn.(string)),
 				},
 			}))
 		}
@@ -154,30 +157,26 @@ func (r *Runtime) CustomizeAllTables(graph *gen.Graph, sourceName, schemaName st
 		return errors.WithStack(err)
 	}
 
-	logAndResponseMetadataResponse(res)
+	logAndResponseMetadataResponse(res, true)
 
 	res, err = r.hasura.Metadata.Bulk(objectRelationBulk)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	logAndResponseMetadataResponse(res)
+	logAndResponseMetadataResponse(res, true)
 
 	res, err = r.hasura.Metadata.Bulk(arrayRelationBulk)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	logAndResponseMetadataResponse(res)
+	logAndResponseMetadataResponse(res, true)
 
 	return nil
 }
 
-////////////////////////////////
-
-////////////////////////////////
-
-func (r *Runtime) ApplyPGPermissionsForAllTables(graph *gen.Graph, schemaName, sourceName string) error {
+func (r *Runtime) PermissionsForAllTables(graph *gen.Graph, sourceName, schemaName string) error {
 	insertPermissionBulk := []metadata.MetadataQuery{}
 	selectPermissionBulk := []metadata.MetadataQuery{}
 	updatePermissionBulk := []metadata.MetadataQuery{}
@@ -260,16 +259,41 @@ func (r *Runtime) ApplyPGPermissionsForAllTables(graph *gen.Graph, schemaName, s
 		}
 	}
 
+	logrus.Infof("%+v", insertPermissionBulk)
+	logrus.Infof("%+v", selectPermissionBulk[2].Args)
+	logrus.Infof("%+v", updatePermissionBulk[2].Args)
+	logrus.Infof("%+v", deletePermissionBulk)
+
+	res, err := r.hasura.Metadata.Bulk(insertPermissionBulk)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	logAndResponseMetadataResponse(res, true)
+
+	res, err = r.hasura.Metadata.Bulk(selectPermissionBulk)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	logAndResponseMetadataResponse(res, true)
+
+	res, err = r.hasura.Metadata.Bulk(updatePermissionBulk)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	logAndResponseMetadataResponse(res, true)
+
+	res, err = r.hasura.Metadata.Bulk(deletePermissionBulk)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	logAndResponseMetadataResponse(res, true)
+
 	return nil
 }
-
-// func (r *Runtime) pgCreateAllXPermissionforNode(op HasuraOperation, nodeTables []string, perm map[string]interface{}, node *gen.Type, role string, sourceName string, allColumns []string) error {
-// 	if err := r.pgCreateXPermission(op, perm, node.Table(), role, sourceName, allColumns...); err != nil {
-// 		return errors.WithStack(err)
-// 	}
-
-// 	return r.createXPermissionForEdges(op, nodeTables, node, perm, role, sourceName)
-// }
 
 func (r *Runtime) isNodeTable(nodeTables []string, tableName string) bool {
 	for _, nodeTable := range nodeTables {
@@ -304,6 +328,8 @@ func (r *Runtime) createInsertPermissionForEdges(nodeTables []string, node *gen.
 
 func (r *Runtime) createSelectPermissionForEdges(nodeTables []string, node *gen.Type, permission map[string]interface{}, role string, sourceName, schemaName string) []metadata.MetadataQuery {
 	bulkEdgePermissions := []metadata.MetadataQuery{}
+
+	logrus.Infof("%+v", permission)
 
 	for _, edge := range node.Edges {
 		if !edge.IsInverse() && !edge.OwnFK() {
@@ -392,18 +418,25 @@ func (r *Runtime) tableAndPermissionsFromEdge(edge *gen.Edge, nodeTables []strin
 	return tableName, newPermission
 }
 
-func (r *Runtime) allColumnsOfNode(node *gen.Type) []string {
-	columns := []string{node.ID.Name}
-
-	for _, f := range node.Fields {
-		columns = append(columns, f.Column().Name)
+func (r *Runtime) tableNameFromDefinition(table metadata.TableDefinition) (string, error) {
+	tableName := ""
+	switch tName := table.Table.(type) {
+	case metadata.TableName:
+		tableName = string(tName)
+	case metadata.QualifiedTableName:
+		tableName = string(tName.Name)
+	default:
+		return "", errors.Errorf("unexpected type for table name: %T", tName)
 	}
 
-	for _, e := range node.Edges {
-		if e.OwnFK() {
-			columns = append(columns, e.Rel.Columns...)
-		}
+	return tableName, nil
+}
+
+func (r *Runtime) clearMetadata() error {
+	_, err := r.hasura.Metadata.ClearMetadata(&metadata.ClearMetadataArgs{})
+	if err != nil {
+		return errors.WithStack(err)
 	}
 
-	return columns
+	return nil
 }

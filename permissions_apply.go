@@ -1,4 +1,4 @@
-package hasura
+package enthasura
 
 import (
 	"github.com/minskylab/hasura-api/metadata"
