@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"time"
 
 	hasura "github.com/minskylab/ent-hasura"
 	"github.com/pkg/errors"
@@ -108,6 +109,7 @@ func applyCommand(c *cli.Context) error {
 
 	run, err := hasura.NewRuntime(
 		hasura.WithEnvFilepath(envFile),
+		hasura.WithTimeout(10*time.Minute),
 	)
 	if err != nil {
 		return errors.WithStack(err)
