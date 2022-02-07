@@ -57,35 +57,6 @@ import (
 // }
 
 func (r *Runtime) pgCreateInsertPermission(perm map[string]interface{}, tableName, roleName, sourceName, schemaName string) metadata.MetadataQuery {
-	// selectedColumns := []string{}
-
-	// if cols, ok := perm["columns"].([]string); ok {
-	// 	selectedColumns = append(selectedColumns, cols...)
-	// }
-
-	// if allColumns, ok := perm["columns"].(string); ok {
-	// 	selectedColumns = append(selectedColumns, allColumns)
-	// }
-
-	// if allColumnsFlag, isOk := perm["all_columns"].(bool); isOk && allColumnsFlag && len(completeColumns) > 0 {
-	// 	selectedColumns = completeColumns
-	// }
-
-	// excludedColumns, _ := perm["excluded_columns"].([]interface{})
-	// if len(excludedColumns) > 0 {
-	// 	// TODO: improve this shit
-	// 	for i, column := range selectedColumns {
-	// 		for _, excludedColumn := range excludedColumns {
-	// 			if column == excludedColumn.(string) {
-	// 				selectedColumns = append(selectedColumns[:i], selectedColumns[i+1:]...)
-	// 				break
-	// 			}
-	// 		}
-	// 	}
-	// }
-
-	// perm["columns"] = selectedColumns
-
 	return metadata.PgCreateInsertPermissionQuery(&metadata.PgCreateInsertPermissionArgs{
 		Permission: metadata.GenericPermission(perm),
 		Table: metadata.QualifiedTableName{

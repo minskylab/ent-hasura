@@ -17,18 +17,22 @@ func (r *Runtime) PerformFullMetadataTransform(entSchemaPath string, sourceName,
 		return errors.WithStack(err)
 	}
 
+	logrus.Info("[1] Prelude, untracking tables or cleaning metadata")
 	if err := r.PerformPrelude(graph, sourceName, schemaName, false); err != nil {
 		return errors.WithMessage(err, "error at prelude")
 	}
 
+	logrus.Info("[2] Tracking all tables related to your Ent Schema")
 	if err := r.TrackAllTables(graph, sourceName, schemaName); err != nil {
 		return errors.WithMessage(err, "error at track all tables")
 	}
 
+	logrus.Info("[3] Customizing all tables with standard GraphQL casing")
 	if err := r.CustomizeAllTables(graph, sourceName, schemaName); err != nil {
 		return errors.WithMessage(err, "error at customize all tables")
 	}
 
+	logrus.Info("[4] Adding permission annotations to all tables")
 	if err := r.PermissionsForAllTables(graph, sourceName, schemaName); err != nil {
 		return errors.WithMessage(err, "error at permissions for all tables")
 	}
@@ -87,12 +91,18 @@ func (r *Runtime) TrackAllTables(graph *gen.Graph, sourceName, schemaName string
 		}))
 	}
 
-	res, err := r.hasura.Metadata.Bulk(trackBatch)
-	if err != nil {
-		return errors.WithStack(err)
+	if len(trackBatch) > 0 {
+		logrus.Infof("ready to TRACK %d tables", len(trackBatch))
+
+		res, err := r.hasura.Metadata.Bulk(trackBatch)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		logAndResponseMetadataResponse(res, true)
 	}
 
-	return logAndResponseMetadataResponse(res, true)
+	return nil
 }
 
 func (r *Runtime) CustomizeAllTables(graph *gen.Graph, sourceName, schemaName string) error {
@@ -152,26 +162,38 @@ func (r *Runtime) CustomizeAllTables(graph *gen.Graph, sourceName, schemaName st
 		}
 	}
 
-	res, err := r.hasura.Metadata.Bulk(tableCustomizeBatch)
-	if err != nil {
-		return errors.WithStack(err)
+	if len(tableCustomizeBatch) > 0 {
+		logrus.Infof("ready to set %d CUSTOMIZE TABLES", len(tableCustomizeBatch))
+
+		res, err := r.hasura.Metadata.Bulk(tableCustomizeBatch)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		logAndResponseMetadataResponse(res, true)
 	}
 
-	logAndResponseMetadataResponse(res, true)
+	if len(objectRelationBulk) > 0 {
+		logrus.Infof("ready to set %d OBJECT RELATIONSHIPS", len(objectRelationBulk))
 
-	res, err = r.hasura.Metadata.Bulk(objectRelationBulk)
-	if err != nil {
-		return errors.WithStack(err)
+		res, err := r.hasura.Metadata.Bulk(objectRelationBulk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		logAndResponseMetadataResponse(res, true)
 	}
 
-	logAndResponseMetadataResponse(res, true)
+	if len(arrayRelationBulk) > 0 {
+		logrus.Infof("ready to set %d ARRAY RELATIONSHIPS", len(arrayRelationBulk))
 
-	res, err = r.hasura.Metadata.Bulk(arrayRelationBulk)
-	if err != nil {
-		return errors.WithStack(err)
+		res, err := r.hasura.Metadata.Bulk(arrayRelationBulk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		logAndResponseMetadataResponse(res, true)
 	}
-
-	logAndResponseMetadataResponse(res, true)
 
 	return nil
 }
@@ -191,106 +213,116 @@ func (r *Runtime) PermissionsForAllTables(graph *gen.Graph, sourceName, schemaNa
 	for _, node := range graph.Nodes {
 		permAnn, isOk := node.Annotations[hasuraPermissionsRoleAnnotationName].(map[string]interface{})
 		if !isOk {
-			logrus.Debug("skipping node: ", node.Name, " as it does not have permissions annotation")
+			// logrus.Debug("skipping node: ", node.Name, " as it does not have permissions annotation")
 			continue
 		}
 
 		roleName, isOk := permAnn["role"].(string)
 		if !isOk {
-			logrus.Debug("skipping node: ", node.Name, " as it does not have permissions role name in annotation")
+			logrus.Warn("skipping node: ", node.Name, " as it does not have permissions role name in annotation")
 			continue
 		}
 
 		if insertPermission, isOk := permAnn["insert_permission"].(map[string]interface{}); isOk {
-			logrus.Info("creating insert permission for table: ", node.Table(), " with role: ", roleName)
+			// logrus.Info("creating insert permission for table: ", node.Table(), " with role: ", roleName)
 
 			insertPermissionBulk = append(
 				insertPermissionBulk,
-				r.pgCreateInsertPermission(insertPermission, node.Table(), roleName, schemaName, sourceName),
+				r.pgCreateInsertPermission(insertPermission, node.Table(), roleName, sourceName, schemaName),
 			)
 
 			insertPermissionBulk = append(
 				insertPermissionBulk,
-				r.createInsertPermissionForEdges(nodeTables, node, permAnn, roleName, sourceName, schemaName)...,
+				r.createInsertPermissionForEdges(nodeTables, node, insertPermission, roleName, sourceName, schemaName)...,
 			)
 		}
 
 		if selectPermission, isOk := permAnn["select_permission"].(map[string]interface{}); isOk {
-			logrus.Info("creating select permission for table: ", node.Table(), " with role: ", roleName)
-
+			// logrus.Info("creating select permission for table: ", node.Table(), " with role: ", roleName)
 			selectPermissionBulk = append(
 				selectPermissionBulk,
-				r.pgCreateSelectPermission(selectPermission, node.Table(), roleName, schemaName, sourceName),
+				r.pgCreateSelectPermission(selectPermission, node.Table(), roleName, sourceName, schemaName),
 			)
 
 			selectPermissionBulk = append(
 				selectPermissionBulk,
-				r.createSelectPermissionForEdges(nodeTables, node, permAnn, roleName, sourceName, schemaName)...,
+				r.createSelectPermissionForEdges(nodeTables, node, selectPermission, roleName, sourceName, schemaName)...,
 			)
 		}
 
 		if updatePermission, isOk := permAnn["update_permission"].(map[string]interface{}); isOk {
-			logrus.Info("creating update permission for table: ", node.Table(), " with role: ", roleName)
+			// logrus.Info("creating update permission for table: ", node.Table(), " with role: ", roleName)
 
 			updatePermissionBulk = append(
 				updatePermissionBulk,
-				r.pgCreateUpdatePermission(updatePermission, node.Table(), roleName, schemaName, sourceName),
+				r.pgCreateUpdatePermission(updatePermission, node.Table(), roleName, sourceName, schemaName),
 			)
 
 			updatePermissionBulk = append(
 				updatePermissionBulk,
-				r.createUpdatePermissionForEdges(nodeTables, node, permAnn, roleName, sourceName, schemaName)...,
+				r.createUpdatePermissionForEdges(nodeTables, node, updatePermission, roleName, sourceName, schemaName)...,
 			)
 
 		}
 
 		if deletePermission, isOk := permAnn["delete_permission"].(map[string]interface{}); isOk {
-			logrus.Info("creating delete permission for table: ", node.Table(), " with role: ", roleName)
+			// logrus.Info("creating delete permission for table: ", node.Table(), " with role: ", roleName)
 
 			deletePermissionBulk = append(
 				deletePermissionBulk,
-				r.pgCreateDeletePermission(deletePermission, node.Table(), roleName, schemaName, sourceName),
+				r.pgCreateDeletePermission(deletePermission, node.Table(), roleName, sourceName, schemaName),
 			)
 
 			deletePermissionBulk = append(
 				deletePermissionBulk,
-				r.createDeletePermissionForEdges(nodeTables, node, permAnn, roleName, sourceName, schemaName)...,
+				r.createDeletePermissionForEdges(nodeTables, node, deletePermission, roleName, sourceName, schemaName)...,
 			)
 		}
 	}
 
-	logrus.Infof("%+v", insertPermissionBulk)
-	logrus.Infof("%+v", selectPermissionBulk[2].Args)
-	logrus.Infof("%+v", updatePermissionBulk[2].Args)
-	logrus.Infof("%+v", deletePermissionBulk)
+	if len(insertPermissionBulk) > 0 {
+		logrus.Infof("ready to create %d INSERT permissions", len(insertPermissionBulk))
 
-	res, err := r.hasura.Metadata.Bulk(insertPermissionBulk)
-	if err != nil {
-		return errors.WithStack(err)
+		res, err := r.hasura.Metadata.Bulk(insertPermissionBulk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		logAndResponseMetadataResponse(res, true)
 	}
 
-	logAndResponseMetadataResponse(res, true)
+	if len(selectPermissionBulk) > 0 {
+		logrus.Infof("ready to create %d SELECT permissions", len(selectPermissionBulk))
 
-	res, err = r.hasura.Metadata.Bulk(selectPermissionBulk)
-	if err != nil {
-		return errors.WithStack(err)
+		res, err := r.hasura.Metadata.Bulk(selectPermissionBulk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		logAndResponseMetadataResponse(res, true)
 	}
 
-	logAndResponseMetadataResponse(res, true)
+	if len(updatePermissionBulk) > 0 {
+		logrus.Infof("ready to create %d UPDATE permissions", len(updatePermissionBulk))
 
-	res, err = r.hasura.Metadata.Bulk(updatePermissionBulk)
-	if err != nil {
-		return errors.WithStack(err)
+		res, err := r.hasura.Metadata.Bulk(updatePermissionBulk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		logAndResponseMetadataResponse(res, true)
 	}
 
-	logAndResponseMetadataResponse(res, true)
+	if len(deletePermissionBulk) > 0 {
+		logrus.Infof("ready to create %d DELETE permissions", len(deletePermissionBulk))
 
-	res, err = r.hasura.Metadata.Bulk(deletePermissionBulk)
-	if err != nil {
-		return errors.WithStack(err)
+		res, err := r.hasura.Metadata.Bulk(deletePermissionBulk)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+
+		logAndResponseMetadataResponse(res, true)
 	}
-
-	logAndResponseMetadataResponse(res, true)
 
 	return nil
 }
@@ -317,9 +349,9 @@ func (r *Runtime) createInsertPermissionForEdges(nodeTables []string, node *gen.
 
 			tableName, newPermission := r.tableAndPermissionsFromEdge(edge, nodeTables, permission)
 
-			logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
+			// logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
 
-			bulkEdgePermissions = append(bulkEdgePermissions, r.pgCreateInsertPermission(newPermission, tableName, role, schemaName, sourceName))
+			bulkEdgePermissions = append(bulkEdgePermissions, r.pgCreateInsertPermission(newPermission, tableName, role, sourceName, schemaName))
 		}
 	}
 
@@ -328,8 +360,6 @@ func (r *Runtime) createInsertPermissionForEdges(nodeTables []string, node *gen.
 
 func (r *Runtime) createSelectPermissionForEdges(nodeTables []string, node *gen.Type, permission map[string]interface{}, role string, sourceName, schemaName string) []metadata.MetadataQuery {
 	bulkEdgePermissions := []metadata.MetadataQuery{}
-
-	logrus.Infof("%+v", permission)
 
 	for _, edge := range node.Edges {
 		if !edge.IsInverse() && !edge.OwnFK() {
@@ -340,9 +370,9 @@ func (r *Runtime) createSelectPermissionForEdges(nodeTables []string, node *gen.
 
 			tableName, newPermission := r.tableAndPermissionsFromEdge(edge, nodeTables, permission)
 
-			logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
+			// logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
 
-			bulkEdgePermissions = append(bulkEdgePermissions, r.pgCreateSelectPermission(newPermission, tableName, role, schemaName, sourceName))
+			bulkEdgePermissions = append(bulkEdgePermissions, r.pgCreateSelectPermission(newPermission, tableName, role, sourceName, schemaName))
 		}
 	}
 
@@ -361,9 +391,9 @@ func (r *Runtime) createUpdatePermissionForEdges(nodeTables []string, node *gen.
 
 			tableName, newPermission := r.tableAndPermissionsFromEdge(edge, nodeTables, permission)
 
-			logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
+			// logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
 
-			bulkEdgePermissions = append(bulkEdgePermissions, r.pgCreateUpdatePermission(newPermission, tableName, role, schemaName, sourceName))
+			bulkEdgePermissions = append(bulkEdgePermissions, r.pgCreateUpdatePermission(newPermission, tableName, role, sourceName, schemaName))
 		}
 	}
 
@@ -382,9 +412,9 @@ func (r *Runtime) createDeletePermissionForEdges(nodeTables []string, node *gen.
 
 			tableName, newPermission := r.tableAndPermissionsFromEdge(edge, nodeTables, permission)
 
-			logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
+			// logrus.Info("creating [edge] insert permission for table: ", tableName, " with role: ", role)
 
-			bulkEdgePermissions = append(bulkEdgePermissions, r.pgCreateDeletePermission(newPermission, tableName, role, schemaName, sourceName))
+			bulkEdgePermissions = append(bulkEdgePermissions, r.pgCreateDeletePermission(newPermission, tableName, role, sourceName, schemaName))
 		}
 	}
 
