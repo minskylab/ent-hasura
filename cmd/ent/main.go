@@ -67,31 +67,31 @@ func boolFlag(name, alias string, defaultValue bool) *cli.BoolFlag {
 }
 
 func generateCommand(c *cli.Context) error {
-	defaultConfig := hasura.DefaultHasuraMetadataConfig
+	// defaultConfig := hasura.DefaultHasuraMetadataConfig
 
-	schema := c.String("schema")
-	name := c.String("name")
-	source := c.String("source")
-	output := c.String("output")
-	input := c.String("input")
-	role := c.String("role")
-	override := c.Bool("override")
+	// schema := c.String("schema")
+	// name := c.String("name")
+	// source := c.String("source")
+	// output := c.String("output")
+	// input := c.String("input")
+	// role := c.String("role")
+	// override := c.Bool("override")
 
-	if schemaOverride := c.Args().First(); schemaOverride != "" {
-		schema = schemaOverride
-	}
+	// if schemaOverride := c.Args().First(); schemaOverride != "" {
+	// 	schema = schemaOverride
+	// }
 
-	defaultConfig.SchemaPath = schema
-	defaultConfig.SchemaName = name
-	defaultConfig.Source = source
-	defaultConfig.OutputMetadataFile = output
-	defaultConfig.MetadataInput = input
-	defaultConfig.DefaultRole = role
-	defaultConfig.OverrideTables = override
+	// defaultConfig.SchemaPath = schema
+	// defaultConfig.SchemaName = name
+	// defaultConfig.Source = source
+	// defaultConfig.OutputMetadataFile = output
+	// defaultConfig.MetadataInput = input
+	// defaultConfig.DefaultRole = role
+	// defaultConfig.OverrideTables = override
 
-	if err := hasura.CreateDefaultMetadataFromSchema(&defaultConfig); err != nil {
-		return errors.WithStack(err)
-	}
+	// if err := hasura.CreateDefaultMetadataFromSchema(&defaultConfig); err != nil {
+	// 	return errors.WithStack(err)
+	// }
 
 	return nil
 }
@@ -106,12 +106,14 @@ func applyCommand(c *cli.Context) error {
 
 	logrus.Debugf("loadenv: %s\n", envFile)
 
-	run, err := hasura.NewEphemeralRuntime(
+	run, err := hasura.NewRuntime(
 		hasura.WithEnvFilepath(envFile),
 	)
 	if err != nil {
 		return errors.WithStack(err)
 	}
+
+	logrus.Debugf("run: %+v\n", run)
 
 	schema := c.String("schema")
 	name := c.String("name")
@@ -121,7 +123,9 @@ func applyCommand(c *cli.Context) error {
 		schema = schemaOverride
 	}
 
-	run.ApplyPGFullProcessForAllTables(schema, name, source)
+	if err := run.PerformFullMetadataTransform(schema, source, name); err != nil {
+		return errors.WithStack(err)
+	}
 
 	return nil
 }

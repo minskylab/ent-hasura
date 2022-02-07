@@ -1,16 +1,13 @@
-package hasura
+package enthasura
 
 import (
-	"encoding/json"
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/entc/gen"
 	pluralize "github.com/gertd/go-pluralize"
 	"github.com/iancoleman/strcase"
+	"github.com/minskylab/hasura-api/metadata"
 	"github.com/pkg/errors"
 	logger "github.com/sirupsen/logrus"
 )
@@ -22,11 +19,13 @@ const (
 	aggregateVerbName = "aggregate"
 )
 
-func basicDefinition(pluralize *pluralize.Client, tableName, nodeName, schemaName string) (*TableDefinition, error) {
-	definition := &TableDefinition{}
+func basicDefinition(pluralize *pluralize.Client, tableName, nodeName, schemaName string) (*metadata.TableDefinition, error) {
+	definition := &metadata.TableDefinition{}
 
-	definition.Table.Name = tableName
-	definition.Table.Schema = schemaName
+	definition.Table = metadata.QualifiedTableName{
+		Name:   tableName,
+		Schema: schemaName,
+	}
 
 	singularName := strcase.ToCamel(pluralize.Singular(nodeName))
 	pluralName := strcase.ToCamel(pluralize.Plural(nodeName))
@@ -39,13 +38,13 @@ func basicDefinition(pluralize *pluralize.Client, tableName, nodeName, schemaNam
 		pluralName = pluralName + "s"
 	}
 
-	definition.Configuration = &Configuration{
-		CustomRootFields:  &CustomRootFields{},
+	definition.Configuration = &metadata.TableConfiguration{
+		CustomRootFields:  &metadata.CustomRootFields{},
 		CustomColumnNames: map[string]string{},
 	}
 
 	definition.Configuration.CustomName = nodeName
-	definition.Configuration.CustomRootFields = &CustomRootFields{
+	definition.Configuration.CustomRootFields = &metadata.CustomRootFields{
 		Insert:          strcase.ToLowerCamel(insertVerbName + pluralName),
 		InsertOne:       strcase.ToLowerCamel(insertVerbName + singularName),
 		Select:          strcase.ToLowerCamel(pluralName),
@@ -60,7 +59,7 @@ func basicDefinition(pluralize *pluralize.Client, tableName, nodeName, schemaNam
 	return definition, nil
 }
 
-func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, schemaName string) (*TableDefinition, error) {
+func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, schemaName string) (*metadata.TableDefinition, error) {
 	definition, err := basicDefinition(pluralize, node.Table(), node.Name, schemaName)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -92,18 +91,18 @@ func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, sc
 			}
 
 			if !edge.OwnFK() {
-				foreignKey = ForeignKeyConstraintOn{
+				foreignKey = metadata.ForeignKeyConstraintOn{
 					Column: name,
-					Table: Table{
+					Table: metadata.QualifiedTableName{
 						Schema: schemaName,
 						Name:   edge.Rel.Table,
 					},
 				}
 			}
 
-			definition.ObjectRelationships = append(definition.ObjectRelationships, &ObjectRelationship{
+			definition.ObjectRelationships = append(definition.ObjectRelationships, &metadata.ObjectRelationship{
 				Name: realName,
-				Using: Using{
+				Using: metadata.Using{
 					ForeignKeyConstraintOn: foreignKey,
 				},
 			})
@@ -124,12 +123,12 @@ func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, sc
 
 			tableName := edge.Rel.Table
 
-			definition.ArrayRelationships = append(definition.ArrayRelationships, &ArrayRelationship{
+			definition.ArrayRelationships = append(definition.ArrayRelationships, &metadata.ArrayRelationship{
 				Name: realName,
-				Using: UsingArray{
-					ForeignKeyConstraintOn: ForeignKeyConstraintOn{
+				Using: metadata.UsingArray{
+					ForeignKeyConstraintOn: metadata.ForeignKeyConstraintOn{
 						Column: columnName,
-						Table: Table{
+						Table: metadata.QualifiedTableName{
 							Schema: schemaName,
 							Name:   tableName,
 						},
@@ -142,7 +141,7 @@ func hasuraTableMetadataFromNode(pluralize *pluralize.Client, node *gen.Type, sc
 	return definition, nil
 }
 
-func hasuraTableFromRelationalTable(pluralize *pluralize.Client, table *schema.Table, schemaName string) (*TableDefinition, error) {
+func hasuraTableFromRelationalTable(pluralize *pluralize.Client, table *schema.Table, schemaName string) (*metadata.TableDefinition, error) {
 	customName := strcase.ToCamel(pluralize.Singular(table.Name))
 
 	definition, err := basicDefinition(pluralize, table.Name, customName, schemaName)
@@ -168,9 +167,9 @@ func hasuraTableFromRelationalTable(pluralize *pluralize.Client, table *schema.T
 
 		var foreignKey interface{} = field.Name
 
-		definition.ObjectRelationships = append(definition.ObjectRelationships, &ObjectRelationship{
+		definition.ObjectRelationships = append(definition.ObjectRelationships, &metadata.ObjectRelationship{
 			Name: nameWithoutID,
-			Using: Using{
+			Using: metadata.Using{
 				ForeignKeyConstraintOn: foreignKey,
 			},
 		})
@@ -179,10 +178,10 @@ func hasuraTableFromRelationalTable(pluralize *pluralize.Client, table *schema.T
 	return definition, nil
 }
 
-func obtainHasuraTablesFromEntSchema(schema *gen.Graph, schemaName string) ([]*TableDefinition, error) {
+func obtainHasuraTablesFromEntSchema(schema *gen.Graph, schemaName string) ([]*metadata.TableDefinition, error) {
 	pluralize := pluralize.NewClient()
 
-	tables := []*TableDefinition{}
+	tables := []*metadata.TableDefinition{}
 	mappedNodes := []string{}
 
 	for _, node := range schema.Nodes {
@@ -216,42 +215,42 @@ func obtainHasuraTablesFromEntSchema(schema *gen.Graph, schemaName string) ([]*T
 	return tables, nil
 }
 
-func hasuraMetadataFromEntSchema(schema *gen.Graph, schemaName string) (*Metadata, error) {
-	metadata := &Metadata{}
+// func hasuraMetadataFromEntSchema(schema *gen.Graph, schemaName string) (*Metadata, error) {
+// 	metadata := &Metadata{}
 
-	tables, err := obtainHasuraTablesFromEntSchema(schema, schemaName)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
+// 	tables, err := obtainHasuraTablesFromEntSchema(schema, schemaName)
+// 	if err != nil {
+// 		return nil, errors.WithStack(err)
+// 	}
 
-	metadata.Sources = append(metadata.Sources, &Source{
-		Tables: tables,
-	})
+// 	metadata.Sources = append(metadata.Sources, &Source{
+// 		Tables: tables,
+// 	})
 
-	return metadata, nil
-}
+// 	return metadata, nil
+// }
 
-func generateFile(metadata HasuraMetadata, outputFile string) error {
-	data, err := json.MarshalIndent(metadata, "", "  ")
-	if err != nil {
-		return errors.WithStack(err)
-	}
+// func generateFile(metadata HasuraMetadata, outputFile string) error {
+// 	data, err := json.MarshalIndent(metadata, "", "  ")
+// 	if err != nil {
+// 		return errors.WithStack(err)
+// 	}
 
-	if err := os.MkdirAll(filepath.Dir(outputFile), os.ModePerm); err != nil {
-		return errors.WithStack(err)
-	}
+// 	if err := os.MkdirAll(filepath.Dir(outputFile), os.ModePerm); err != nil {
+// 		return errors.WithStack(err)
+// 	}
 
-	return ioutil.WriteFile(outputFile, []byte(data), 0644)
-}
+// 	return ioutil.WriteFile(outputFile, []byte(data), 0644)
+// }
 
-func generateRawMetadata(graph *gen.Graph, schemaName, outputFile string) error {
-	hMetadata := HasuraMetadata{}
+// func generateRawMetadata(graph *gen.Graph, schemaName, outputFile string) error {
+// 	hMetadata := HasuraMetadata{}
 
-	metadata, err := hasuraMetadataFromEntSchema(graph, schemaName)
-	if err != nil {
-		return errors.WithStack(err)
-	}
+// 	metadata, err := hasuraMetadataFromEntSchema(graph, schemaName)
+// 	if err != nil {
+// 		return errors.WithStack(err)
+// 	}
 
-	hMetadata.Metadata = metadata
-	return generateFile(hMetadata, outputFile)
-}
+// 	hMetadata.Metadata = metadata
+// 	return generateFile(hMetadata, outputFile)
+// }

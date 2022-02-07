@@ -33,16 +33,15 @@ func (n Note) Annotations() []schema.Annotation {
 	return []schema.Annotation{
 		hasura.PermissionsRoleAnnotation{
 			Role: "user",
-			SelectPermission: &hasura.PermissionSelect{
+			SelectPermission: &hasura.SelectPermission{
+				Columns:           hasura.AllColumns,
 				Filter:            hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
-				AllColumns:        true,
 				AllowAggregations: true,
 			},
-			UpdatePermission: &hasura.PermissionUpdate{
-				Check:           hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
-				Filter:          hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
-				AllColumns:      true,
-				ExcludedColumns: []string{"content"},
+			UpdatePermission: &hasura.UpdatePermission{
+				Columns: hasura.AllColumns,
+				Check:   hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
+				Filter:  hasura.M{"authors": hasura.M{"user": hasura.M{"id": hasura.Eq("X-Hasura-User-Id")}}},
 			},
 		},
 	}
