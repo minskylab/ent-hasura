@@ -20,11 +20,12 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
-	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/go-bindata/go-bindata v1.0.1-0.20190711162640-ee3c2418e368 // indirect
 	github.com/go-openapi/inflect v0.19.0 // indirect
 	github.com/go-resty/resty/v2 v2.7.0 // indirect
@@ -32,9 +33,9 @@ require (
 	github.com/gookit/config/v2 v2.0.27 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/lib/pq v1.10.4
-	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
-	github.com/urfave/cli/v2 v2.3.0
+	github.com/urfave/cli/v2 v2.27.1
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20211029224645-99673261e6eb // indirect
 	golang.org/x/sys v0.0.0-20220204135822-1c1b9b1eba6a // indirect
