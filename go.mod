@@ -1,6 +1,6 @@
 module github.com/minskylab/ent-hasura
 
-go 1.17
+go 1.21
 
 require (
 	entgo.io/ent v0.9.1
@@ -31,7 +31,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gookit/config/v2 v2.0.27 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
-	github.com/lib/pq v1.10.4
+	github.com/lib/pq v1.12.3
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/urfave/cli/v2 v2.3.0
