@@ -5,7 +5,7 @@ go 1.17
 require (
 	entgo.io/ent v0.9.1
 	github.com/gertd/go-pluralize v0.1.7
-	github.com/iancoleman/strcase v0.2.0
+	github.com/iancoleman/strcase v0.3.0
 	github.com/minskylab/hasura-api v0.3.17
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
